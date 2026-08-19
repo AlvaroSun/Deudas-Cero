@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Deudas Cero - Iniciar Sesion</title>
+  <link rel="stylesheet" href="../../assets/css/styles.css">
+</head>
+<body>
+  <main>
+    <h1>Iniciar Sesion</h1>
+    <form id="formulario-login" onsubmit="manejarLogin(event)">
+      <label for="email">Correo electronico</label>
+      <input type="email" id="email" name="email" required>
+
+      <label for="contrasena">Contrasena</label>
+      <input type="password" id="contrasena" name="contrasena" required>
+
+      <div id="mensaje" style="display:none;"></div>
+
+      <button type="submit">Ingresar</button>
+      <p>No tenes cuenta? <a class="enlace" href="registro.html">Registrate aqui</a></p>
+    </form>
+  </main>
+  <script src="../../assets/js/auth.js"></script>
+  <script>
+    if (sesionActiva()) {
+      window.location.href = '../index.html';
+    }
+  </script>
+</body>
+</html>
