@@ -31,6 +31,14 @@ export default defineConfig({
     },
   },
 
+  // En desarrollo, las llamadas a /api se redirigen al backend (npm run dev:server)
+  server: {
+    host: true,
+    proxy: {
+      '/api': 'http://localhost:3000',
+    },
+  },
+
   // File types to support raw imports. Never add .css, .tsx, or .ts files to this.
   assetsInclude: ['**/*.svg', '**/*.csv'],
 })
