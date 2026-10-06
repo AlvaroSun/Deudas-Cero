@@ -36,6 +36,10 @@ export const router = createBrowserRouter([
       { path: "login", Component: Login },
       { path: "registro", Component: Registro },
 
+      // Portadas de secciones (públicas: el contenido de adentro pide login)
+      { path: "modulos", Component: ModulosIndex },
+      { path: "aprendizaje", Component: AprendizajeIndex },
+
       // Nosotros (público)
       { path: "nosotros", Component: Nosotros },
       { path: "nosotros/contacto", Component: Contacto },
@@ -45,7 +49,6 @@ export const router = createBrowserRouter([
         Component: ProtectedRoute,
         children: [
           // Módulos
-          { path: "modulos", Component: ModulosIndex },
           { path: "modulos/ahorro", Component: Ahorro },
           { path: "modulos/credito", Component: Credito },
           { path: "modulos/presupuesto-personal", Component: PresupuestoPersonal },
@@ -63,7 +66,6 @@ export const router = createBrowserRouter([
           },
 
           // Aprendizaje
-          { path: "aprendizaje", Component: AprendizajeIndex },
           { path: "aprendizaje/articulos", Component: ArticulosList },
           { path: "aprendizaje/articulos/:id", Component: Articulo },
           { path: "aprendizaje/cursos", Component: CursosList },

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router";
+import { Link, useNavigate, useLocation } from "react-router";
 import { User, Mail, Lock, Eye, EyeOff, AlertCircle, CheckCircle } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 
@@ -13,6 +13,8 @@ export default function Registro() {
   const [loading, setLoading] = useState(false);
   const { register } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const from = (location.state as any)?.from || "/";
 
   const passwordStrength = password.length === 0 ? 0 : password.length < 6 ? 1 : password.length < 10 ? 2 : 3;
   const strengthLabel = ["", "Débil", "Media", "Fuerte"];
@@ -27,7 +29,7 @@ export default function Registro() {
     setLoading(true);
     const result = await register(nombre, email, password);
     setLoading(false);
-    if (result.success) navigate("/");
+    if (result.success) navigate(from, { replace: true });
     else setError(result.error || "Error al registrarse.");
   }
 

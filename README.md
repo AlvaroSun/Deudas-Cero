@@ -213,9 +213,9 @@ Los usuarios y sus datos se guardan en una base de datos **SQLite** en el servid
 
 | Sin iniciar sesión | Con sesión | Solo admin |
 |--------------------|------------|------------|
-| Inicio, Login, Registro, Nosotros, Contacto | Módulos, Presupuesto, Aprendizaje, Perfil | Panel de administración |
+| Inicio, Login, Registro, Nosotros, Contacto, portadas de Módulos y Aprendizaje | Cada módulo, toda la herramienta de Presupuesto, Artículos, Cursos, Quiz/Autoevaluación, Glosario, Perfil | Panel de administración |
 
-Si alguien sin sesión intenta entrar a una página privada, se lo redirige a `/login` y, al ingresar, vuelve a la página que quería ver. La API también rechaza (error 401) cualquier pedido de datos sin sesión.
+Si alguien sin sesión intenta entrar a una página privada, aparece una **ventana emergente para iniciar sesión**. Al ingresar se muestra directamente la página que quería ver; si cierra la ventana, vuelve a la portada de la sección. La API también rechaza (error 401) cualquier pedido de datos sin sesión.
 
 ### Cuenta de administrador
 
@@ -264,7 +264,7 @@ Para ver la base de datos podés usar [DB Browser for SQLite](https://sqlitebrow
 | `/` | Página de inicio |
 | `/login` | Iniciar sesión |
 | `/registro` | Crear cuenta |
-| `/modulos` | Lista de módulos *(requiere login)* |
+| `/modulos` | Lista de módulos |
 | `/modulos/credito` | Módulo: Crédito y endeudamiento *(requiere login)* |
 | `/modulos/ahorro` | Módulo: Cultura del ahorro *(requiere login)* |
 | `/modulos/presupuesto-personal` | Módulo: Presupuesto personal *(requiere login)* |
@@ -272,7 +272,7 @@ Para ver la base de datos podés usar [DB Browser for SQLite](https://sqlitebrow
 | `/presupuesto/ingresos` | Registrar ingresos *(requiere login)* |
 | `/presupuesto/gastos` | Registrar gastos *(requiere login)* |
 | `/presupuesto/resumen` | Gráficos y resumen *(requiere login)* |
-| `/aprendizaje` | Centro de aprendizaje *(requiere login)* |
+| `/aprendizaje` | Centro de aprendizaje |
 | `/aprendizaje/articulos` | Lista de artículos *(requiere login)* |
 | `/aprendizaje/articulos/1` | Artículo individual *(requiere login)* |
 | `/aprendizaje/cursos` | Lista de cursos *(requiere login)* |

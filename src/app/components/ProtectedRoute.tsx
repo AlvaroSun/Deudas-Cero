@@ -1,6 +1,7 @@
 import { Navigate, Outlet, useLocation } from "react-router";
 import { useAuth } from "../context/AuthContext";
 import { ReactNode } from "react";
+import LoginModal from "./LoginModal";
 
 export function ProtectedRoute({ children, adminOnly = false }: { children?: ReactNode; adminOnly?: boolean }) {
   const { isAuthenticated, user, loading } = useAuth();
@@ -15,7 +16,9 @@ export function ProtectedRoute({ children, adminOnly = false }: { children?: Rea
     );
   }
   if (!isAuthenticated) {
-    return <Navigate to="/login" state={{ from: location.pathname }} replace />;
+    // El panel de admin manda al login; el resto del contenido muestra la ventana de inicio de sesión
+    if (adminOnly) return <Navigate to="/login" state={{ from: location.pathname }} replace />;
+    return <LoginModal />;
   }
   if (adminOnly && user?.rol !== "admin") {
     return <Navigate to="/" replace />;
