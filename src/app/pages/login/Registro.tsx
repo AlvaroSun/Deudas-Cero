@@ -25,8 +25,7 @@ export default function Registro() {
     if (password !== confirm) { setError("Las contraseñas no coinciden."); return; }
     if (password.length < 6) { setError("La contraseña debe tener al menos 6 caracteres."); return; }
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 600));
-    const result = register(nombre, email, password);
+    const result = await register(nombre, email, password);
     setLoading(false);
     if (result.success) navigate("/");
     else setError(result.error || "Error al registrarse.");

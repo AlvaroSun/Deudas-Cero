@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { api } from "../lib/api";
 
 interface User {
   id: string;
@@ -9,97 +10,69 @@ interface User {
   fechaRegistro: string;
 }
 
+type Result = { success: boolean; error?: string };
+
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
-  login: (email: string, password: string) => { success: boolean; error?: string };
-  register: (nombre: string, email: string, password: string) => { success: boolean; error?: string };
-  logout: () => void;
-  updateUser: (data: Partial<User>) => void;
+  loading: boolean;
+  login: (email: string, password: string) => Promise<Result>;
+  register: (nombre: string, email: string, password: string) => Promise<Result>;
+  logout: () => Promise<void>;
+  updateUser: (data: Pick<User, "nombre">) => Promise<Result>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
 
+  // Al cargar la página, pregunta al servidor si hay una sesión activa
   useEffect(() => {
-    const stored = localStorage.getItem("finanzas_user");
-    if (stored) setUser(JSON.parse(stored));
+    api<{ user: User | null }>("/auth/me")
+      .then(({ user }) => setUser(user))
+      .catch(() => setUser(null))
+      .finally(() => setLoading(false));
   }, []);
 
-  function login(email: string, password: string) {
-    const users: Array<User & { password: string }> = JSON.parse(
-      localStorage.getItem("finanzas_users") || "[]"
-    );
-    const adminEmails = ["admin@finanzasjoven.com"];
-    const found = users.find((u) => u.email === email && u.password === password);
-    if (!found) {
-      if (email === "admin@finanzasjoven.com" && password === "admin123") {
-        const adminUser: User = {
-          id: "admin-1",
-          nombre: "Administrador",
-          email,
-          rol: "admin",
-          fechaRegistro: new Date().toISOString(),
-        };
-        setUser(adminUser);
-        localStorage.setItem("finanzas_user", JSON.stringify(adminUser));
-        return { success: true };
-      }
-      return { success: false, error: "Email o contraseña incorrectos." };
+  async function login(email: string, password: string): Promise<Result> {
+    try {
+      const { user } = await api<{ user: User }>("/auth/login", { method: "POST", body: { email, password } });
+      setUser(user);
+      return { success: true };
+    } catch (e) {
+      return { success: false, error: (e as Error).message };
     }
-    const { password: _, ...userData } = found;
-    setUser(userData);
-    localStorage.setItem("finanzas_user", JSON.stringify(userData));
-    return { success: true };
   }
 
-  function register(nombre: string, email: string, password: string) {
-    const users: Array<User & { password: string }> = JSON.parse(
-      localStorage.getItem("finanzas_users") || "[]"
-    );
-    if (users.find((u) => u.email === email)) {
-      return { success: false, error: "Ya existe una cuenta con ese email." };
+  async function register(nombre: string, email: string, password: string): Promise<Result> {
+    try {
+      const { user } = await api<{ user: User }>("/auth/register", { method: "POST", body: { nombre, email, password } });
+      setUser(user);
+      return { success: true };
+    } catch (e) {
+      return { success: false, error: (e as Error).message };
     }
-    const newUser: User & { password: string } = {
-      id: `user-${Date.now()}`,
-      nombre,
-      email,
-      password,
-      rol: "usuario",
-      fechaRegistro: new Date().toISOString(),
-    };
-    users.push(newUser);
-    localStorage.setItem("finanzas_users", JSON.stringify(users));
-    const { password: _, ...userData } = newUser;
-    setUser(userData);
-    localStorage.setItem("finanzas_user", JSON.stringify(userData));
-    return { success: true };
   }
 
-  function logout() {
+  async function logout() {
+    await api("/auth/logout", { method: "POST" }).catch(() => {});
     setUser(null);
-    localStorage.removeItem("finanzas_user");
   }
 
-  function updateUser(data: Partial<User>) {
-    if (!user) return;
-    const updated = { ...user, ...data };
-    setUser(updated);
-    localStorage.setItem("finanzas_user", JSON.stringify(updated));
-    const users: Array<User & { password: string }> = JSON.parse(
-      localStorage.getItem("finanzas_users") || "[]"
-    );
-    const idx = users.findIndex((u) => u.id === user.id);
-    if (idx !== -1) {
-      users[idx] = { ...users[idx], ...data };
-      localStorage.setItem("finanzas_users", JSON.stringify(users));
+  async function updateUser(data: Pick<User, "nombre">): Promise<Result> {
+    try {
+      const { user } = await api<{ user: User }>("/auth/me", { method: "PUT", body: data });
+      setUser(user);
+      return { success: true };
+    } catch (e) {
+      return { success: false, error: (e as Error).message };
     }
   }
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, login, register, logout, updateUser }}>
+    <AuthContext.Provider value={{ user, isAuthenticated: !!user, loading, login, register, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

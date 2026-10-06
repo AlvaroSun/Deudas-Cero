@@ -1,17 +1,13 @@
 import { Link } from "react-router";
 import { useAuth } from "../../context/AuthContext";
+import { usePresupuesto } from "../../lib/usePresupuesto";
 import { User, Mail, Calendar, Edit, BookOpen, PiggyBank, GraduationCap } from "lucide-react";
 
 export default function Perfil() {
   const { user } = useAuth();
+  const { ingresos, gastos, totalIngresos, totalGastos, balance } = usePresupuesto();
 
   if (!user) return null;
-
-  const ingresos = JSON.parse(localStorage.getItem("presupuesto_ingresos") || "[]");
-  const gastos = JSON.parse(localStorage.getItem("presupuesto_gastos") || "[]");
-  const totalIngresos = ingresos.reduce((s: number, i: { monto: number }) => s + i.monto, 0);
-  const totalGastos = gastos.reduce((s: number, g: { monto: number }) => s + g.monto, 0);
-  const balance = totalIngresos - totalGastos;
 
   const fmt = (n: number) =>
     new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(n);

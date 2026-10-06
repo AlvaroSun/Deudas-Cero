@@ -1,14 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Plus, Trash2, CheckCircle, AlertCircle } from "lucide-react";
-
-interface Gasto {
-  id: string;
-  descripcion: string;
-  monto: number;
-  categoria: string;
-  fecha: string;
-  presupuestado?: number;
-}
+import { api } from "../../lib/api";
+import { usePresupuesto, type Gasto } from "../../lib/usePresupuesto";
 
 const categorias = [
   "Vivienda", "Alimentación", "Transporte", "Salud",
@@ -16,41 +9,46 @@ const categorias = [
 ];
 
 export default function Gastos() {
-  const [gastos, setGastos] = useState<Gasto[]>([]);
+  const { gastos, setGastos, error: loadError } = usePresupuesto();
   const [form, setForm] = useState({
     descripcion: "", monto: "", categoria: "Alimentación",
     fecha: new Date().toISOString().split("T")[0], presupuestado: ""
   });
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState("");
 
-  useEffect(() => {
-    setGastos(JSON.parse(localStorage.getItem("presupuesto_gastos") || "[]"));
-  }, []);
-
-  function save(data: Gasto[]) {
-    localStorage.setItem("presupuesto_gastos", JSON.stringify(data));
-    setGastos(data);
-  }
-
-  function handleAdd(e: React.FormEvent) {
+  async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
     if (!form.descripcion || !form.monto) return;
-    const nuevo: Gasto = {
-      id: `gasto-${Date.now()}`,
-      descripcion: form.descripcion,
-      monto: parseFloat(form.monto),
-      categoria: form.categoria,
-      fecha: form.fecha,
-      presupuestado: form.presupuestado ? parseFloat(form.presupuestado) : undefined,
-    };
-    save([...gastos, nuevo]);
+    try {
+      const nuevo = await api<Gasto>("/gastos", {
+        method: "POST",
+        body: {
+          descripcion: form.descripcion,
+          monto: parseFloat(form.monto),
+          categoria: form.categoria,
+          fecha: form.fecha,
+          presupuestado: form.presupuestado ? parseFloat(form.presupuestado) : null,
+        },
+      });
+      setGastos([...gastos, nuevo]);
+      setError("");
+    } catch (err) {
+      setError((err as Error).message);
+      return;
+    }
     setForm({ descripcion: "", monto: "", categoria: "Alimentación", fecha: new Date().toISOString().split("T")[0], presupuestado: "" });
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   }
 
-  function handleDelete(id: string) {
-    save(gastos.filter((g) => g.id !== id));
+  async function handleDelete(id: string) {
+    try {
+      await api(`/gastos/${id}`, { method: "DELETE" });
+      setGastos(gastos.filter((g) => g.id !== id));
+    } catch (err) {
+      setError((err as Error).message);
+    }
   }
 
   const total = gastos.reduce((s, g) => s + g.monto, 0);
@@ -68,6 +66,7 @@ export default function Gastos() {
       <div className="lg:col-span-2">
         <div className="bg-card rounded-2xl p-6 border border-border sticky top-40">
           <h2 className="font-bold text-xl text-foreground mb-5">Agregar gasto</h2>
+          {(error || loadError) && <p className="mb-4 text-sm text-destructive">{error || loadError}</p>}
           <form onSubmit={handleAdd} className="space-y-4">
             <div>
               <label className="block text-sm font-semibold text-foreground mb-1.5">Descripción</label>

@@ -9,10 +9,13 @@ export default function EditarPerfil() {
   const [nombre, setNombre] = useState(user?.nombre || "");
   const [guardado, setGuardado] = useState(false);
 
-  function handleSubmit(e: React.FormEvent) {
+  const [error, setError] = useState("");
+
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!nombre.trim()) return;
-    updateUser({ nombre: nombre.trim() });
+    const result = await updateUser({ nombre: nombre.trim() });
+    if (!result.success) { setError(result.error || "No se pudo guardar."); return; }
     setGuardado(true);
     setTimeout(() => { setGuardado(false); navigate("/perfil"); }, 1200);
   }
@@ -42,6 +45,7 @@ export default function EditarPerfil() {
             </div>
           </div>
 
+          {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label className="block text-sm font-semibold text-foreground mb-2">Nombre completo</label>

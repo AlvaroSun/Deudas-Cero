@@ -1,4 +1,6 @@
+import { useEffect, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
+import { api } from "../../lib/api";
 import { Users, BookOpen, PiggyBank, TrendingUp, BarChart2, FileText } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line } from "recharts";
 
@@ -23,9 +25,13 @@ const paginasPopulares = [
 export default function AdminDashboard() {
   const { user } = useAuth();
 
-  const usuarios: Array<{ nombre: string; email: string; fechaRegistro: string }> = JSON.parse(
-    localStorage.getItem("finanzas_users") || "[]"
-  );
+  const [usuarios, setUsuarios] = useState<Array<{ nombre: string; email: string; rol: string; fechaRegistro: string }>>([]);
+
+  useEffect(() => {
+    api<typeof usuarios>("/admin/usuarios")
+      .then((list) => setUsuarios(list.filter((u) => u.rol !== "admin")))
+      .catch(() => setUsuarios([]));
+  }, []);
 
   const kpis = [
     { label: "Usuarios registrados", value: usuarios.length + 2481, icon: Users, color: "bg-primary/10 text-primary", trend: "+12%" },

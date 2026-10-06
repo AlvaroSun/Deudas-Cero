@@ -1,18 +1,26 @@
 import { useState } from "react";
 import { Link } from "react-router";
 import { Mail, MapPin, Clock, CheckCircle, Send } from "lucide-react";
+import { api } from "../../lib/api";
 
 export default function Contacto() {
   const [form, setForm] = useState({ nombre: "", email: "", asunto: "", mensaje: "" });
   const [enviado, setEnviado] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 800));
-    setLoading(false);
-    setEnviado(true);
+    setError("");
+    try {
+      await api("/contacto", { method: "POST", body: form });
+      setEnviado(true);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setLoading(false);
+    }
   }
 
   if (enviado) {
@@ -65,7 +73,7 @@ export default function Contacto() {
               <h3 className="font-bold text-foreground mb-3">FAQ rápido</h3>
               {[
                 { q: "¿La plataforma es gratis?", a: "Síp y siempre lo será." },
-                { q: "¿Guardan mis datos financieros?", a: "No. Todo se guarda localmente en tu dispositivo." },
+                { q: "¿Guardan mis datos financieros?", a: "Solo los que cargás en la herramienta de presupuesto, asociados a tu cuenta." },
                 { q: "¿Tienen app móvil?", a: "La web es responsive." },
               ].map((faq) => (
                 <div key={faq.q} className="mb-3 last:mb-0">
@@ -79,6 +87,7 @@ export default function Contacto() {
           <div className="lg:col-span-3">
             <div className="bg-card rounded-2xl p-8 border border-border">
               <h2 className="text-2xl font-bold text-foreground mb-6">Envianos un mensaje</h2>
+              {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
               <form onSubmit={handleSubmit} className="space-y-5">
                 <div className="grid sm:grid-cols-2 gap-5">
                   <div>

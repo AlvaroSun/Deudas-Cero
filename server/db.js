@@ -23,7 +23,7 @@ db.exec(`
     email           TEXT NOT NULL UNIQUE COLLATE NOCASE,
     password_hash   TEXT NOT NULL,
     rol             TEXT NOT NULL DEFAULT 'usuario' CHECK (rol IN ('usuario', 'admin')),
-    fecha_registro  TEXT NOT NULL DEFAULT (datetime('now'))
+    fecha_registro  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
   );
 
   CREATE TABLE IF NOT EXISTS sesiones (
@@ -57,7 +57,7 @@ db.exec(`
     email    TEXT NOT NULL,
     asunto   TEXT,
     mensaje  TEXT NOT NULL,
-    fecha    TEXT NOT NULL DEFAULT (datetime('now'))
+    fecha    TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
   );
 `);
 

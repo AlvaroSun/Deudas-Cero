@@ -19,8 +19,7 @@ export default function Login() {
     setError("");
     if (!email || !password) { setError("Completá todos los campos."); return; }
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 500));
-    const result = login(email, password);
+    const result = await login(email, password);
     setLoading(false);
     if (result.success) navigate(from, { replace: true });
     else setError(result.error || "Error al iniciar sesión.");
@@ -90,9 +89,8 @@ export default function Login() {
           </form>
 
           <div className="mt-6 p-4 rounded-xl bg-secondary border border-border text-xs text-muted-foreground">
-            <p className="font-semibold mb-1 text-foreground">Cuenta de prueba:</p>
-            <p>Admin: admin@finanzasjoven.com / admin123</p>
-            <p className="mt-1">O <Link to="/registro" className="text-accent underline">registrate</Link> para crear tu propia cuenta.</p>
+            <p className="font-semibold mb-1 text-foreground">¿Primera vez?</p>
+            <p>O <Link to="/registro" className="text-accent underline">registrate</Link> para crear tu propia cuenta.</p>
           </div>
         </div>
 

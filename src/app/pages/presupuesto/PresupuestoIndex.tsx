@@ -1,18 +1,9 @@
 import { Link } from "react-router";
 import { ArrowRight, TrendingUp, TrendingDown, Wallet } from "lucide-react";
-
-function getPresupuestoData() {
-  const ingresos: { id: string; descripcion: string; monto: number; categoria: string; fecha: string }[] =
-    JSON.parse(localStorage.getItem("presupuesto_ingresos") || "[]");
-  const gastos: { id: string; descripcion: string; monto: number; categoria: string; fecha: string }[] =
-    JSON.parse(localStorage.getItem("presupuesto_gastos") || "[]");
-  const totalIngresos = ingresos.reduce((s, i) => s + i.monto, 0);
-  const totalGastos = gastos.reduce((s, g) => s + g.monto, 0);
-  return { ingresos, gastos, totalIngresos, totalGastos, balance: totalIngresos - totalGastos };
-}
+import { usePresupuesto } from "../../lib/usePresupuesto";
 
 export default function PresupuestoIndex() {
-  const { totalIngresos, totalGastos, balance, ingresos, gastos } = getPresupuestoData();
+  const { totalIngresos, totalGastos, balance, ingresos, gastos } = usePresupuesto();
 
   const fmt = (n: number) =>
     new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(n);

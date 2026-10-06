@@ -1,6 +1,6 @@
 # 🪙 FinanzasJoven — Plataforma de Educación Financiera
 
-Plataforma web educativa sobre endeudamiento y finanzas personales para jóvenes latinoamericanos. Incluye módulos de aprendizaje, herramienta de presupuesto, artículos, cursos, quiz y sistema de login (front-end con localStorage, sin backend).
+Plataforma web educativa sobre endeudamiento y finanzas personales para jóvenes latinoamericanos. Incluye módulos de aprendizaje, herramienta de presupuesto, artículos, cursos, quiz y sistema de login con **backend propio (Node.js + Express) y base de datos SQLite**.
 
 ---
 
@@ -8,7 +8,7 @@ Plataforma web educativa sobre endeudamiento y finanzas personales para jóvenes
 
 Antes de empezar, necesitás tener instalado en tu computadora:
 
-### 1. Node.js (versión 18 o superior)
+### 1. Node.js (versión 22.13 o superior)
 
 Node.js es el motor que corre JavaScript fuera del navegador. Sin él, nada va a funcionar.
 
@@ -18,7 +18,7 @@ Abrí una terminal (ver instrucciones más abajo) y escribí:
 ```
 node --version
 ```
-Si aparece algo como `v18.0.0` o mayor, ya lo tenés. Si dice "comando no encontrado", seguí estos pasos:
+Si aparece algo como `v22.13.0` o mayor, ya lo tenés. Si dice "comando no encontrado", seguí estos pasos:
 
 - Entrá a https://nodejs.org
 - Descargá la versión **LTS** (la recomendada, en verde)
@@ -82,42 +82,82 @@ Si `npm` no funciona, probá con:
 npx npm install
 ```
 
-### Paso 2 — Iniciá el servidor de desarrollo
+### Paso 2 — Iniciá el proyecto en modo desarrollo
+
+Necesitás **dos terminales** abiertas en la carpeta del proyecto:
 
 ```bash
+# Terminal 1 — backend (API + base de datos)
+npm run dev:server
+
+# Terminal 2 — frontend (Vite, con recarga automática)
 npm run dev
-```
-
-Deberías ver algo así en la terminal:
-
-```
-  VITE v6.x.x  ready in 800 ms
-
-  ➜  Local:   http://localhost:5173/
-  ➜  Network: http://192.168.x.x:5173/
 ```
 
 ### Paso 3 — Abrí el navegador
 
-Abrí tu navegador (Chrome, Firefox, Edge...) y entrá a:
-
-```
-http://localhost:5173
-```
-
-**¡Listo!** La plataforma debería estar corriendo.
+Entrá a `http://localhost:5173`. Vite redirige automáticamente las llamadas a `/api` al backend (puerto 3000).
 
 ---
 
-## 🛑 Cómo detener el servidor
+## 🏫 Instalación en el servidor de la escuela (acceso por IP)
 
-Para parar el servidor, hacé clic en la terminal y presioná:
+En producción **un solo proceso** sirve la página y la API, en el puerto que elijas.
+
+```bash
+# 1. Copiar/clonar el proyecto en el servidor y entrar a la carpeta
+git clone https://github.com/AlvaroSun/Deudas-Cero.git
+cd Deudas-Cero
+
+# 2. Instalar dependencias y compilar el frontend
+npm install
+npm run build
+
+# 3. Iniciar el servidor
+npm start
+```
+
+Después, desde cualquier PC de la red, entrá a:
 
 ```
-Ctrl + C
+http://<IP-del-servidor>:3000
 ```
 
-Confirmá con `S` o `Y` si te lo pide.
+Para saber la IP del servidor: `ip addr` (Linux) o `ipconfig` (Windows).
+
+### Usar solo la IP (sin `:3000`)
+
+El navegador usa el puerto **80** por defecto. Iniciá el servidor en ese puerto:
+
+```bash
+# Linux (el puerto 80 requiere permisos de administrador)
+sudo PORT=80 npm start
+
+# Windows (PowerShell como administrador)
+$env:PORT=80; npm start
+```
+
+Y ya se puede entrar con `http://<IP-del-servidor>`.
+
+### Variables de configuración (opcionales)
+
+| Variable | Por defecto | Para qué sirve |
+|----------|-------------|----------------|
+| `PORT` | `3000` | Puerto donde escucha el servidor |
+| `HOST` | `0.0.0.0` | `0.0.0.0` = accesible desde otras PCs de la red |
+| `DB_PATH` | `server/data/deudascero.db` | Ubicación del archivo de base de datos |
+| `ADMIN_EMAIL` | `admin@finanzasjoven.com` | Email del admin que se crea la primera vez |
+| `ADMIN_PASSWORD` | `admin123` | Contraseña de ese admin (**cambiala en el servidor**) |
+
+### Dejarlo corriendo aunque se cierre la terminal (Linux)
+
+```bash
+sudo npm install -g pm2
+sudo PORT=80 pm2 start server/index.js --name deudascero
+pm2 save && pm2 startup
+```
+
+Si el servidor tiene firewall, habilitá el puerto: `sudo ufw allow 80` (o el que uses).
 
 ---
 
@@ -125,6 +165,11 @@ Confirmá con `S` o `Y` si te lo pide.
 
 ```
 finanzasjoven/
+├── server/                 ← BACKEND
+│   ├── index.js            ← Servidor Express (API + sirve el frontend)
+│   ├── db.js               ← Base de datos SQLite y creación de tablas
+│   ├── auth.js             ← Hash de contraseñas y tokens de sesión
+│   └── data/               ← Archivo de la base de datos (se crea solo)
 ├── index.html              ← Archivo de entrada para el navegador
 ├── package.json            ← Lista de dependencias y comandos
 ├── vite.config.ts          ← Configuración del servidor
@@ -134,7 +179,10 @@ finanzasjoven/
     │   ├── App.tsx         ← Componente raíz con router
     │   ├── routes.tsx      ← Todas las rutas/páginas
     │   ├── context/
-    │   │   └── AuthContext.tsx   ← Sistema de login
+    │   │   └── AuthContext.tsx   ← Sistema de login (habla con la API)
+    │   ├── lib/
+    │   │   ├── api.ts            ← Cliente para llamar al backend
+    │   │   └── usePresupuesto.ts ← Carga ingresos y gastos del usuario
     │   ├── components/
     │   │   ├── Layout.tsx        ← Estructura con navbar y footer
     │   │   ├── Navbar.tsx        ← Barra de navegación
@@ -157,35 +205,55 @@ finanzasjoven/
 
 ---
 
-## 🔐 Sistema de login
+## 🔐 Sistema de login y base de datos
 
-El sistema de autenticación funciona **100% en el navegador** usando `localStorage`. No hay servidor ni base de datos real.
+Los usuarios y sus datos se guardan en una base de datos **SQLite** en el servidor (`server/data/deudascero.db`). Las contraseñas se guardan cifradas (scrypt) y la sesión viaja en una cookie segura (`httpOnly`) que dura 7 días.
 
-### Cuenta de administrador (ya existe)
+### Qué puede ver cada visitante
+
+| Sin iniciar sesión | Con sesión | Solo admin |
+|--------------------|------------|------------|
+| Inicio, Login, Registro, Nosotros, Contacto | Módulos, Presupuesto, Aprendizaje, Perfil | Panel de administración |
+
+Si alguien sin sesión intenta entrar a una página privada, se lo redirige a `/login` y, al ingresar, vuelve a la página que quería ver. La API también rechaza (error 401) cualquier pedido de datos sin sesión.
+
+### Cuenta de administrador
+
+Se crea automáticamente la primera vez que arranca el servidor:
 
 | Email | Contraseña |
 |-------|------------|
 | `admin@finanzasjoven.com` | `admin123` |
 
-El administrador puede acceder al panel en `/admin/dashboard` con estadísticas y lista de usuarios registrados.
+Podés cambiarla con las variables `ADMIN_EMAIL` y `ADMIN_PASSWORD` **antes del primer arranque**.
 
-### Crear una cuenta nueva
+### Tablas de la base de datos
 
-Entrá a la página **Registrarme** y completá el formulario. Los datos se guardan en tu navegador (localStorage). Si borrás los datos del navegador, la cuenta desaparece.
+| Tabla | Contenido |
+|-------|-----------|
+| `usuarios` | Nombre, email, contraseña cifrada, rol y fecha de registro |
+| `sesiones` | Sesiones activas (token + vencimiento) |
+| `ingresos` | Ingresos de cada usuario |
+| `gastos` | Gastos de cada usuario |
+| `mensajes_contacto` | Mensajes enviados desde el formulario de contacto |
 
-### ¿Dónde se guardan los datos?
+Para ver la base de datos podés usar [DB Browser for SQLite](https://sqlitebrowser.org/). Para empezar de cero, detené el servidor y borrá la carpeta `server/data/`.
 
-Todos los datos (usuarios, ingresos, gastos) se guardan en el **localStorage** de tu navegador. Para verlos:
-1. Abrí las DevTools del navegador (`F12`)
-2. Andá a la pestaña **Application** (o "Almacenamiento")
-3. Buscá **Local Storage** → `http://localhost:5173`
+### Endpoints de la API
 
-| Clave en localStorage | Contenido |
-|----------------------|-----------|
-| `finanzas_user` | Usuario con sesión activa |
-| `finanzas_users` | Lista de todos los usuarios registrados |
-| `presupuesto_ingresos` | Registros de ingresos |
-| `presupuesto_gastos` | Registros de gastos |
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| POST | `/api/auth/register` | Crear cuenta |
+| POST | `/api/auth/login` | Iniciar sesión |
+| POST | `/api/auth/logout` | Cerrar sesión |
+| GET / PUT | `/api/auth/me` | Ver / editar usuario actual |
+| GET / POST | `/api/ingresos` | Listar / agregar ingresos |
+| DELETE | `/api/ingresos/:id` | Borrar un ingreso |
+| GET / POST | `/api/gastos` | Listar / agregar gastos |
+| DELETE | `/api/gastos/:id` | Borrar un gasto |
+| POST | `/api/contacto` | Enviar mensaje de contacto |
+| GET | `/api/admin/usuarios` | Lista de usuarios *(admin)* |
+| GET | `/api/admin/mensajes` | Mensajes de contacto *(admin)* |
 
 ---
 
@@ -196,21 +264,21 @@ Todos los datos (usuarios, ingresos, gastos) se guardan en el **localStorage** d
 | `/` | Página de inicio |
 | `/login` | Iniciar sesión |
 | `/registro` | Crear cuenta |
-| `/modulos` | Lista de módulos |
-| `/modulos/credito` | Módulo: Crédito y endeudamiento |
-| `/modulos/ahorro` | Módulo: Cultura del ahorro |
-| `/modulos/presupuesto-personal` | Módulo: Presupuesto personal |
-| `/presupuesto` | Herramienta de presupuesto |
-| `/presupuesto/ingresos` | Registrar ingresos |
-| `/presupuesto/gastos` | Registrar gastos |
-| `/presupuesto/resumen` | Gráficos y resumen |
-| `/aprendizaje` | Centro de aprendizaje |
-| `/aprendizaje/articulos` | Lista de artículos |
-| `/aprendizaje/articulos/1` | Artículo individual |
-| `/aprendizaje/cursos` | Lista de cursos |
-| `/aprendizaje/cursos/1` | Curso individual |
-| `/aprendizaje/quiz` | Autoevaluación financiera (15 preguntas) |
-| `/aprendizaje/glosario` | Glosario de términos financieros |
+| `/modulos` | Lista de módulos *(requiere login)* |
+| `/modulos/credito` | Módulo: Crédito y endeudamiento *(requiere login)* |
+| `/modulos/ahorro` | Módulo: Cultura del ahorro *(requiere login)* |
+| `/modulos/presupuesto-personal` | Módulo: Presupuesto personal *(requiere login)* |
+| `/presupuesto` | Herramienta de presupuesto *(requiere login)* |
+| `/presupuesto/ingresos` | Registrar ingresos *(requiere login)* |
+| `/presupuesto/gastos` | Registrar gastos *(requiere login)* |
+| `/presupuesto/resumen` | Gráficos y resumen *(requiere login)* |
+| `/aprendizaje` | Centro de aprendizaje *(requiere login)* |
+| `/aprendizaje/articulos` | Lista de artículos *(requiere login)* |
+| `/aprendizaje/articulos/1` | Artículo individual *(requiere login)* |
+| `/aprendizaje/cursos` | Lista de cursos *(requiere login)* |
+| `/aprendizaje/cursos/1` | Curso individual *(requiere login)* |
+| `/aprendizaje/quiz` | Autoevaluación financiera (15 preguntas) *(requiere login)* |
+| `/aprendizaje/glosario` | Glosario de términos financieros *(requiere login)* |
 | `/nosotros` | Quiénes somos |
 | `/nosotros/contacto` | Formulario de contacto |
 | `/perfil` | Mi perfil *(requiere login)* |
@@ -229,7 +297,8 @@ Todos los datos (usuarios, ingresos, gastos) se guardan en el **localStorage** d
 | **Vite** | Servidor de desarrollo y compilación |
 | **Recharts** | Gráficos del resumen de presupuesto |
 | **Lucide React** | Íconos |
-| **localStorage** | Persistencia de datos (sin backend) |
+| **Express** | Servidor web y API REST |
+| **SQLite** (`node:sqlite`) | Base de datos |
 
 ---
 
@@ -252,14 +321,20 @@ Asegurate de estar usando la URL correcta: `http://localhost:5173` (no `http://l
 
 ### Cerré la terminal y ahora no funciona
 
-El servidor solo corre mientras la terminal está abierta. Abrí de nuevo la terminal, navigá a la carpeta del proyecto y corré:
-```bash
-npm run dev
-```
+El servidor solo corre mientras la terminal está abierta. Volvé a iniciarlo (`npm start`, o `npm run dev:server` + `npm run dev` en desarrollo), o usá `pm2` como se explica arriba.
 
-### Los datos de mi cuenta desaparecieron
+### "No se pudo conectar con el servidor"
 
-Los datos se guardan en el navegador. Si borraste las cookies/caché o usás otro navegador, los datos no van a estar. Tenés que volver a registrarte.
+El backend no está corriendo. En desarrollo, asegurate de tener abierto `npm run dev:server` en otra terminal.
+
+### Desde otra PC no carga la página
+
+- Verificá que usás la IP correcta del servidor y el puerto (`:3000` si no usaste el 80).
+- Revisá que el firewall del servidor permita ese puerto.
+
+### "ExperimentalWarning: SQLite is an experimental feature"
+
+Es solo un aviso de Node.js, se puede ignorar.
 
 ---
 

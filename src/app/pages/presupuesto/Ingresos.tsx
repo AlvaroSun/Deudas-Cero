@@ -1,42 +1,39 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Plus, Trash2, CheckCircle } from "lucide-react";
-
-interface Ingreso {
-  id: string;
-  descripcion: string;
-  monto: number;
-  categoria: string;
-  fecha: string;
-}
+import { api } from "../../lib/api";
+import { usePresupuesto, type Ingreso } from "../../lib/usePresupuesto";
 
 const categorias = ["Sueldo", "Freelance / Changas", "Alquiler cobrado", "Beca", "Venta", "Otro"];
 
 export default function Ingresos() {
-  const [ingresos, setIngresos] = useState<Ingreso[]>([]);
+  const { ingresos, setIngresos, error: loadError } = usePresupuesto();
   const [form, setForm] = useState({ descripcion: "", monto: "", categoria: "Sueldo", fecha: new Date().toISOString().split("T")[0] });
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState("");
 
-  useEffect(() => {
-    setIngresos(JSON.parse(localStorage.getItem("presupuesto_ingresos") || "[]"));
-  }, []);
-
-  function save(data: Ingreso[]) {
-    localStorage.setItem("presupuesto_ingresos", JSON.stringify(data));
-    setIngresos(data);
-  }
-
-  function handleAdd(e: React.FormEvent) {
+  async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
     if (!form.descripcion || !form.monto) return;
-    const nuevo: Ingreso = { id: `ing-${Date.now()}`, ...form, monto: parseFloat(form.monto) };
-    save([...ingresos, nuevo]);
+    try {
+      const nuevo = await api<Ingreso>("/ingresos", { method: "POST", body: { ...form, monto: parseFloat(form.monto) } });
+      setIngresos([...ingresos, nuevo]);
+      setError("");
+    } catch (err) {
+      setError((err as Error).message);
+      return;
+    }
     setForm({ descripcion: "", monto: "", categoria: "Sueldo", fecha: new Date().toISOString().split("T")[0] });
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   }
 
-  function handleDelete(id: string) {
-    save(ingresos.filter((i) => i.id !== id));
+  async function handleDelete(id: string) {
+    try {
+      await api(`/ingresos/${id}`, { method: "DELETE" });
+      setIngresos(ingresos.filter((i) => i.id !== id));
+    } catch (err) {
+      setError((err as Error).message);
+    }
   }
 
   const total = ingresos.reduce((s, i) => s + i.monto, 0);
@@ -49,6 +46,7 @@ export default function Ingresos() {
       <div className="lg:col-span-2">
         <div className="bg-card rounded-2xl p-6 border border-border sticky top-40">
           <h2 className="font-bold text-xl text-foreground mb-5">Agregar ingreso</h2>
+          {(error || loadError) && <p className="mb-4 text-sm text-destructive">{error || loadError}</p>}
           <form onSubmit={handleAdd} className="space-y-4">
             <div>
               <label className="block text-sm font-semibold text-foreground mb-1.5">Descripción</label>

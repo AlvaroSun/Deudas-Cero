@@ -1,5 +1,6 @@
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { Link } from "react-router";
+import { usePresupuesto } from "../../lib/usePresupuesto";
 
 const COLORS = ["#E9824A", "#9A6A58", "#7FA66B", "#D96B5F", "#C4956A", "#5C8A6B", "#B07050", "#8A9A5A"];
 
@@ -8,14 +9,7 @@ function fmt(n: number) {
 }
 
 export default function Resumen() {
-  const ingresos: { id: string; monto: number; categoria: string; descripcion: string }[] =
-    JSON.parse(localStorage.getItem("presupuesto_ingresos") || "[]");
-  const gastos: { id: string; monto: number; categoria: string; descripcion: string }[] =
-    JSON.parse(localStorage.getItem("presupuesto_gastos") || "[]");
-
-  const totalIngresos = ingresos.reduce((s, i) => s + i.monto, 0);
-  const totalGastos = gastos.reduce((s, g) => s + g.monto, 0);
-  const balance = totalIngresos - totalGastos;
+  const { ingresos, gastos, totalIngresos, totalGastos, balance } = usePresupuesto();
   const tasaAhorro = totalIngresos > 0 ? ((balance / totalIngresos) * 100).toFixed(1) : "0";
 
   // Group gastos by categoria

@@ -36,53 +36,45 @@ export const router = createBrowserRouter([
       { path: "login", Component: Login },
       { path: "registro", Component: Registro },
 
-      // Módulos
-      { path: "modulos", Component: ModulosIndex },
-      { path: "modulos/ahorro", Component: Ahorro },
-      { path: "modulos/credito", Component: Credito },
-      { path: "modulos/presupuesto-personal", Component: PresupuestoPersonal },
-
-      // Presupuesto tool
-      {
-        path: "presupuesto",
-        Component: PresupuestoLayout,
-        children: [
-          { index: true, Component: PresupuestoIndex },
-          { path: "ingresos", Component: Ingresos },
-          { path: "gastos", Component: Gastos },
-          { path: "resumen", Component: Resumen },
-        ],
-      },
-
-      // Aprendizaje
-      { path: "aprendizaje", Component: AprendizajeIndex },
-      { path: "aprendizaje/articulos", Component: ArticulosList },
-      { path: "aprendizaje/articulos/:id", Component: Articulo },
-      { path: "aprendizaje/cursos", Component: CursosList },
-      { path: "aprendizaje/cursos/:id", Component: Curso },
-      { path: "aprendizaje/quiz", Component: Quiz },
-      { path: "aprendizaje/glosario", Component: Glosario },
-
-      // Nosotros
+      // Nosotros (público)
       { path: "nosotros", Component: Nosotros },
       { path: "nosotros/contacto", Component: Contacto },
 
-      // Perfil (requiere login)
+      // Todo lo de acá abajo requiere haber iniciado sesión
       {
-        path: "perfil",
-        Component: () => (
-          <ProtectedRoute>
-            <Perfil />
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: "perfil/editar",
-        Component: () => (
-          <ProtectedRoute>
-            <EditarPerfil />
-          </ProtectedRoute>
-        ),
+        Component: ProtectedRoute,
+        children: [
+          // Módulos
+          { path: "modulos", Component: ModulosIndex },
+          { path: "modulos/ahorro", Component: Ahorro },
+          { path: "modulos/credito", Component: Credito },
+          { path: "modulos/presupuesto-personal", Component: PresupuestoPersonal },
+
+          // Presupuesto tool
+          {
+            path: "presupuesto",
+            Component: PresupuestoLayout,
+            children: [
+              { index: true, Component: PresupuestoIndex },
+              { path: "ingresos", Component: Ingresos },
+              { path: "gastos", Component: Gastos },
+              { path: "resumen", Component: Resumen },
+            ],
+          },
+
+          // Aprendizaje
+          { path: "aprendizaje", Component: AprendizajeIndex },
+          { path: "aprendizaje/articulos", Component: ArticulosList },
+          { path: "aprendizaje/articulos/:id", Component: Articulo },
+          { path: "aprendizaje/cursos", Component: CursosList },
+          { path: "aprendizaje/cursos/:id", Component: Curso },
+          { path: "aprendizaje/quiz", Component: Quiz },
+          { path: "aprendizaje/glosario", Component: Glosario },
+
+          // Perfil
+          { path: "perfil", Component: Perfil },
+          { path: "perfil/editar", Component: EditarPerfil },
+        ],
       },
 
       // Admin
