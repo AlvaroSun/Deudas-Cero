@@ -1,73 +1,59 @@
-// Base de datos SQLite (archivo local, sin instalar nada extra).
-// Usa el módulo nativo node:sqlite, disponible desde Node.js 22.
-import { DatabaseSync } from "node:sqlite";
-import { mkdirSync } from "node:fs";
+// Conexión a la base de datos PostgreSQL de Supabase.
+// La cadena de conexión se toma de la variable DATABASE_URL (archivo .env).
+import pg from "pg";
+import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { hashPassword } from "./auth.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const DB_PATH = process.env.DB_PATH || path.join(__dirname, "data", "deudascero.db");
 
-mkdirSync(path.dirname(DB_PATH), { recursive: true });
-
-export const db = new DatabaseSync(DB_PATH);
-
-db.exec(`
-  PRAGMA foreign_keys = ON;
-  PRAGMA journal_mode = WAL;
-
-  CREATE TABLE IF NOT EXISTS usuarios (
-    id              INTEGER PRIMARY KEY AUTOINCREMENT,
-    nombre          TEXT NOT NULL,
-    email           TEXT NOT NULL UNIQUE COLLATE NOCASE,
-    password_hash   TEXT NOT NULL,
-    rol             TEXT NOT NULL DEFAULT 'usuario' CHECK (rol IN ('usuario', 'admin')),
-    fecha_registro  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+if (!process.env.DATABASE_URL) {
+  console.error(
+    "Falta la variable DATABASE_URL.\n" +
+    "Copiá .env.example como .env y pegá la cadena de conexión de Supabase (ver README)."
   );
+  process.exit(1);
+}
 
-  CREATE TABLE IF NOT EXISTS sesiones (
-    token       TEXT PRIMARY KEY,
-    usuario_id  INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
-    expira      TEXT NOT NULL
-  );
+// Las columnas DATE se devuelven como texto "AAAA-MM-DD" (no como Date con zona horaria)
+pg.types.setTypeParser(pg.types.builtins.DATE, (v) => v);
 
-  CREATE TABLE IF NOT EXISTS ingresos (
-    id           INTEGER PRIMARY KEY AUTOINCREMENT,
-    usuario_id   INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
-    descripcion  TEXT NOT NULL,
-    monto        REAL NOT NULL,
-    categoria    TEXT NOT NULL,
-    fecha        TEXT NOT NULL
-  );
+const url = new URL(process.env.DATABASE_URL);
+const esLocal = ["localhost", "127.0.0.1", "::1"].includes(url.hostname);
 
-  CREATE TABLE IF NOT EXISTS gastos (
-    id             INTEGER PRIMARY KEY AUTOINCREMENT,
-    usuario_id     INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
-    descripcion    TEXT NOT NULL,
-    monto          REAL NOT NULL,
-    categoria      TEXT NOT NULL,
-    fecha          TEXT NOT NULL,
-    presupuestado  REAL
-  );
+export const pool = new pg.Pool({
+  connectionString: process.env.DATABASE_URL,
+  // Supabase exige conexión cifrada (SSL); una base local normalmente no
+  ssl: esLocal || process.env.DATABASE_SSL === "false" ? false : { rejectUnauthorized: false },
+  max: 5,
+});
 
-  CREATE TABLE IF NOT EXISTS mensajes_contacto (
-    id       INTEGER PRIMARY KEY AUTOINCREMENT,
-    nombre   TEXT NOT NULL,
-    email    TEXT NOT NULL,
-    asunto   TEXT,
-    mensaje  TEXT NOT NULL,
-    fecha    TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
-  );
-`);
+// Ejecuta una consulta y devuelve las filas
+export async function query(sql, params = []) {
+  const { rows } = await pool.query(sql, params);
+  return rows;
+}
 
-// Crea el administrador por defecto si todavía no existe.
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "admin@finanzasjoven.com";
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "admin123";
+// Igual que query, pero devuelve solo la primera fila (o null)
+export async function queryOne(sql, params = []) {
+  const rows = await query(sql, params);
+  return rows[0] ?? null;
+}
 
-const adminExiste = db.prepare("SELECT id FROM usuarios WHERE rol = 'admin' LIMIT 1").get();
-if (!adminExiste) {
-  db.prepare("INSERT INTO usuarios (nombre, email, password_hash, rol) VALUES (?, ?, ?, 'admin')")
-    .run("Administrador", ADMIN_EMAIL, hashPassword(ADMIN_PASSWORD));
-  console.log(`Administrador creado: ${ADMIN_EMAIL}`);
+// Crea las tablas (si no existen) y el administrador por defecto
+export async function initDb() {
+  await pool.query(readFileSync(path.join(__dirname, "..", "supabase", "schema.sql"), "utf8"));
+
+  const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "admin@finanzasjoven.com";
+  const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "admin123";
+  const admin = await queryOne("SELECT id FROM usuarios WHERE rol = 'admin' LIMIT 1");
+  if (!admin) {
+    await query("INSERT INTO usuarios (nombre, email, password_hash, rol) VALUES ($1, $2, $3, 'admin')", [
+      "Administrador", ADMIN_EMAIL.toLowerCase(), hashPassword(ADMIN_PASSWORD),
+    ]);
+    console.log(`Administrador creado: ${ADMIN_EMAIL}`);
+  }
+
+  await query("DELETE FROM sesiones WHERE expira <= now()");
 }

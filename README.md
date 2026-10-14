@@ -1,6 +1,6 @@
 # 🪙 FinanzasJoven — Plataforma de Educación Financiera
 
-Plataforma web educativa sobre endeudamiento y finanzas personales para jóvenes latinoamericanos. Incluye módulos de aprendizaje, herramienta de presupuesto, artículos, cursos, quiz y sistema de login con **backend propio (Node.js + Express) y base de datos SQLite**.
+Plataforma web educativa sobre endeudamiento y finanzas personales para jóvenes latinoamericanos. Incluye módulos de aprendizaje, herramienta de presupuesto, artículos, cursos, quiz y sistema de login con **backend propio (Node.js + Express) y base de datos PostgreSQL en [Supabase](https://supabase.com)**.
 
 ---
 
@@ -8,7 +8,7 @@ Plataforma web educativa sobre endeudamiento y finanzas personales para jóvenes
 
 Antes de empezar, necesitás tener instalado en tu computadora:
 
-### 1. Node.js (versión 22.13 o superior)
+### 1. Node.js (versión 22.9 o superior)
 
 Node.js es el motor que corre JavaScript fuera del navegador. Sin él, nada va a funcionar.
 
@@ -18,7 +18,7 @@ Abrí una terminal (ver instrucciones más abajo) y escribí:
 ```
 node --version
 ```
-Si aparece algo como `v22.13.0` o mayor, ya lo tenés. Si dice "comando no encontrado", seguí estos pasos:
+Si aparece algo como `v22.9.0` o mayor, ya lo tenés. Si dice "comando no encontrado", seguí estos pasos:
 
 - Entrá a https://nodejs.org
 - Descargá la versión **LTS** (la recomendada, en verde)
@@ -82,7 +82,11 @@ Si `npm` no funciona, probá con:
 npx npm install
 ```
 
-### Paso 2 — Iniciá el proyecto en modo desarrollo
+### Paso 2 — Configurá la base de datos (Supabase)
+
+Ver la sección **🗄️ Configurar Supabase** más abajo. En resumen: creá el archivo `.env` con la cadena de conexión de tu proyecto de Supabase.
+
+### Paso 3 — Iniciá el proyecto en modo desarrollo
 
 Necesitás **dos terminales** abiertas en la carpeta del proyecto:
 
@@ -94,15 +98,42 @@ npm run dev:server
 npm run dev
 ```
 
-### Paso 3 — Abrí el navegador
+### Paso 4 — Abrí el navegador
 
 Entrá a `http://localhost:5173`. Vite redirige automáticamente las llamadas a `/api` al backend (puerto 3000).
 
 ---
 
+## 🗄️ Configurar Supabase
+
+La base de datos está en Supabase (PostgreSQL en la nube, plan gratuito). Las tablas se crean **solas** la primera vez que arranca el servidor.
+
+1. Entrá a https://supabase.com, creá una cuenta y hacé clic en **New project**.
+   - Elegí un nombre, una **contraseña de la base de datos** (guardala) y la región más cercana (por ejemplo *South America (São Paulo)*).
+2. Cuando el proyecto esté listo, hacé clic en el botón **Connect** (arriba).
+3. En **Connection string**, elegí **Session pooler** y copiá la URI. Se ve así:
+   ```
+   postgresql://postgres.abcdefghijkl:[YOUR-PASSWORD]@aws-0-sa-east-1.pooler.supabase.com:5432/postgres
+   ```
+   > ⚠️ Usá **Session pooler**, no "Direct connection": la conexión directa solo funciona con IPv6 y la mayoría de las redes (como la de la escuela) usan IPv4.
+4. En la carpeta del proyecto, copiá el archivo `.env.example` como `.env`:
+   ```bash
+   cp .env.example .env        # Linux / Mac
+   copy .env.example .env      # Windows
+   ```
+5. Abrí `.env` y pegá la URI en `DATABASE_URL`, reemplazando `[YOUR-PASSWORD]` por tu contraseña.
+   Si la contraseña tiene caracteres especiales (`@`, `#`, `/`, `%`...), cambiala por una solo con letras y números para evitar problemas.
+6. Iniciá el servidor (`npm run dev:server` o `npm start`). Deberías ver `Administrador creado: admin@finanzasjoven.com`.
+
+Para ver los datos: Supabase → **Table Editor**. Si preferís crear las tablas a mano, pegá el contenido de `supabase/schema.sql` en **SQL Editor** y hacé clic en **Run**.
+
+> 🔒 El archivo `.env` tiene la contraseña de la base de datos: **no lo subas a GitHub** (ya está en `.gitignore`).
+
+---
+
 ## 🏫 Instalación en el servidor de la escuela (acceso por IP)
 
-En producción **un solo proceso** sirve la página y la API, en el puerto que elijas.
+En producción **un solo proceso** sirve la página y la API, en el puerto que elijas. El servidor necesita **salida a internet** para conectarse con Supabase.
 
 ```bash
 # 1. Copiar/clonar el proyecto en el servidor y entrar a la carpeta
@@ -113,7 +144,11 @@ cd Deudas-Cero
 npm install
 npm run build
 
-# 3. Iniciar el servidor
+# 3. Crear el archivo .env con la conexión a Supabase (ver sección anterior)
+cp .env.example .env
+nano .env
+
+# 4. Iniciar el servidor
 npm start
 ```
 
@@ -127,7 +162,7 @@ Para saber la IP del servidor: `ip addr` (Linux) o `ipconfig` (Windows).
 
 ### Usar solo la IP (sin `:3000`)
 
-El navegador usa el puerto **80** por defecto. Iniciá el servidor en ese puerto:
+El navegador usa el puerto **80** por defecto. Poné `PORT=80` en el archivo `.env`, o inicialo así:
 
 ```bash
 # Linux (el puerto 80 requiere permisos de administrador)
@@ -139,13 +174,13 @@ $env:PORT=80; npm start
 
 Y ya se puede entrar con `http://<IP-del-servidor>`.
 
-### Variables de configuración (opcionales)
+### Variables de configuración (archivo `.env`)
 
 | Variable | Por defecto | Para qué sirve |
 |----------|-------------|----------------|
+| `DATABASE_URL` | *(obligatoria)* | Cadena de conexión de Supabase (Session pooler) |
 | `PORT` | `3000` | Puerto donde escucha el servidor |
 | `HOST` | `0.0.0.0` | `0.0.0.0` = accesible desde otras PCs de la red |
-| `DB_PATH` | `server/data/deudascero.db` | Ubicación del archivo de base de datos |
 | `ADMIN_EMAIL` | `admin@finanzasjoven.com` | Email del admin que se crea la primera vez |
 | `ADMIN_PASSWORD` | `admin123` | Contraseña de ese admin (**cambiala en el servidor**) |
 
@@ -153,7 +188,7 @@ Y ya se puede entrar con `http://<IP-del-servidor>`.
 
 ```bash
 sudo npm install -g pm2
-sudo PORT=80 pm2 start server/index.js --name deudascero
+sudo pm2 start npm --name deudascero -- start
 pm2 save && pm2 startup
 ```
 
@@ -167,9 +202,11 @@ Si el servidor tiene firewall, habilitá el puerto: `sudo ufw allow 80` (o el qu
 finanzasjoven/
 ├── server/                 ← BACKEND
 │   ├── index.js            ← Servidor Express (API + sirve el frontend)
-│   ├── db.js               ← Base de datos SQLite y creación de tablas
+│   ├── db.js               ← Conexión a Supabase (PostgreSQL)
 │   ├── auth.js             ← Hash de contraseñas y tokens de sesión
-│   └── data/               ← Archivo de la base de datos (se crea solo)
+├── supabase/
+│   └── schema.sql          ← Tablas de la base de datos
+├── .env.example            ← Modelo del archivo de configuración (.env)
 ├── index.html              ← Archivo de entrada para el navegador
 ├── package.json            ← Lista de dependencias y comandos
 ├── vite.config.ts          ← Configuración del servidor
@@ -207,7 +244,7 @@ finanzasjoven/
 
 ## 🔐 Sistema de login y base de datos
 
-Los usuarios y sus datos se guardan en una base de datos **SQLite** en el servidor (`server/data/deudascero.db`). Las contraseñas se guardan cifradas (scrypt) y la sesión viaja en una cookie segura (`httpOnly`) que dura 7 días.
+Los usuarios y sus datos se guardan en la base de datos **PostgreSQL de Supabase**. El navegador nunca habla directo con Supabase: todo pasa por nuestro servidor, que es el único que tiene la contraseña. Las contraseñas se guardan cifradas (scrypt) y la sesión viaja en una cookie segura (`httpOnly`) que dura 7 días.
 
 ### Qué puede ver cada visitante
 
@@ -237,7 +274,9 @@ Podés cambiarla con las variables `ADMIN_EMAIL` y `ADMIN_PASSWORD` **antes del 
 | `gastos` | Gastos de cada usuario |
 | `mensajes_contacto` | Mensajes enviados desde el formulario de contacto |
 
-Para ver la base de datos podés usar [DB Browser for SQLite](https://sqlitebrowser.org/). Para empezar de cero, detené el servidor y borrá la carpeta `server/data/`.
+Para ver los datos: Supabase → **Table Editor**. Las tablas tienen RLS (*Row Level Security*) activado sin políticas, así que no se pueden leer desde la API pública de Supabase; solo desde nuestro servidor.
+
+Para empezar de cero: Supabase → **SQL Editor** → `DROP TABLE mensajes_contacto, gastos, ingresos, sesiones, usuarios;` y reiniciá el servidor.
 
 ### Endpoints de la API
 
@@ -298,7 +337,7 @@ Para ver la base de datos podés usar [DB Browser for SQLite](https://sqlitebrow
 | **Recharts** | Gráficos del resumen de presupuesto |
 | **Lucide React** | Íconos |
 | **Express** | Servidor web y API REST |
-| **SQLite** (`node:sqlite`) | Base de datos |
+| **Supabase** (PostgreSQL) + `pg` | Base de datos |
 
 ---
 
@@ -332,9 +371,15 @@ El backend no está corriendo. En desarrollo, asegurate de tener abierto `npm ru
 - Verificá que usás la IP correcta del servidor y el puerto (`:3000` si no usaste el 80).
 - Revisá que el firewall del servidor permita ese puerto.
 
-### "ExperimentalWarning: SQLite is an experimental feature"
+### "Falta la variable DATABASE_URL"
 
-Es solo un aviso de Node.js, se puede ignorar.
+No existe el archivo `.env` o no tiene `DATABASE_URL`. Ver la sección **🗄️ Configurar Supabase**.
+
+### "No se pudo conectar con la base de datos de Supabase"
+
+- `password authentication failed`: la contraseña en `DATABASE_URL` es incorrecta (podés cambiarla en Supabase → Project Settings → Database).
+- `ENOTFOUND` / `ENETUNREACH` / `timeout`: revisá que usaste la URI de **Session pooler** y que el servidor tiene internet.
+- Si el proyecto de Supabase estuvo una semana sin uso, el plan gratuito lo **pausa**: entrá al panel de Supabase y hacé clic en *Restore project*.
 
 ---
 

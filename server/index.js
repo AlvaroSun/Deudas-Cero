@@ -4,7 +4,7 @@ import express from "express";
 import path from "node:path";
 import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { db } from "./db.js";
+import { query, queryOne, initDb } from "./db.js";
 import { hashPassword, verifyPassword, newToken } from "./auth.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -32,21 +32,21 @@ function publicUser(u) {
   return { id: String(u.id), nombre: u.nombre, email: u.email, rol: u.rol, fechaRegistro: u.fecha_registro };
 }
 
-function startSession(res, usuarioId) {
+async function startSession(res, usuarioId) {
   const token = newToken();
   const expira = new Date(Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000);
-  db.prepare("INSERT INTO sesiones (token, usuario_id, expira) VALUES (?, ?, ?)").run(token, usuarioId, expira.toISOString());
+  await query("INSERT INTO sesiones (token, usuario_id, expira) VALUES ($1, $2, $3)", [token, usuarioId, expira]);
   res.cookie(COOKIE, token, { httpOnly: true, sameSite: "lax", expires: expira, path: "/" });
 }
 
 // Carga el usuario de la sesión (si existe) en req.user
-app.use((req, _res, next) => {
+app.use(async (req, _res, next) => {
   const token = getCookie(req, COOKIE);
   if (token) {
-    const row = db.prepare(`
+    const row = await queryOne(`
       SELECT u.* FROM sesiones s JOIN usuarios u ON u.id = s.usuario_id
-      WHERE s.token = ? AND s.expira > ?
-    `).get(token, new Date().toISOString());
+      WHERE s.token = $1 AND s.expira > now()
+    `, [token]);
     if (row) req.user = row;
   }
   next();
@@ -70,7 +70,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // ---------- Autenticación ----------
 
-app.post("/api/auth/register", (req, res) => {
+app.post("/api/auth/register", async (req, res) => {
   const { nombre, email, password } = req.body || {};
   if (!isText(nombre, 100) || !isText(email, 200) || typeof password !== "string") {
     return res.status(400).json({ error: "Completá todos los campos." });
@@ -78,33 +78,33 @@ app.post("/api/auth/register", (req, res) => {
   if (!EMAIL_RE.test(email.trim())) return res.status(400).json({ error: "El email no es válido." });
   if (password.length < 6) return res.status(400).json({ error: "La contraseña debe tener al menos 6 caracteres." });
 
-  const existe = db.prepare("SELECT id FROM usuarios WHERE email = ?").get(email.trim());
+  const existe = await queryOne("SELECT id FROM usuarios WHERE lower(email) = lower($1)", [email.trim()]);
   if (existe) return res.status(409).json({ error: "Ya existe una cuenta con ese email." });
 
-  const { lastInsertRowid } = db
-    .prepare("INSERT INTO usuarios (nombre, email, password_hash) VALUES (?, ?, ?)")
-    .run(nombre.trim(), email.trim().toLowerCase(), hashPassword(password));
-  const user = db.prepare("SELECT * FROM usuarios WHERE id = ?").get(lastInsertRowid);
-  startSession(res, user.id);
+  const user = await queryOne(
+    "INSERT INTO usuarios (nombre, email, password_hash) VALUES ($1, $2, $3) RETURNING *",
+    [nombre.trim(), email.trim().toLowerCase(), hashPassword(password)]
+  );
+  await startSession(res, user.id);
   res.status(201).json({ user: publicUser(user) });
 });
 
-app.post("/api/auth/login", (req, res) => {
+app.post("/api/auth/login", async (req, res) => {
   const { email, password } = req.body || {};
   if (typeof email !== "string" || typeof password !== "string") {
     return res.status(400).json({ error: "Completá todos los campos." });
   }
-  const user = db.prepare("SELECT * FROM usuarios WHERE email = ?").get(email.trim());
+  const user = await queryOne("SELECT * FROM usuarios WHERE lower(email) = lower($1)", [email.trim()]);
   if (!user || !verifyPassword(password, user.password_hash)) {
     return res.status(401).json({ error: "Email o contraseña incorrectos." });
   }
-  startSession(res, user.id);
+  await startSession(res, user.id);
   res.json({ user: publicUser(user) });
 });
 
-app.post("/api/auth/logout", (req, res) => {
+app.post("/api/auth/logout", async (req, res) => {
   const token = getCookie(req, COOKIE);
-  if (token) db.prepare("DELETE FROM sesiones WHERE token = ?").run(token);
+  if (token) await query("DELETE FROM sesiones WHERE token = $1", [token]);
   res.clearCookie(COOKIE, { path: "/" });
   res.json({ ok: true });
 });
@@ -113,11 +113,10 @@ app.get("/api/auth/me", (req, res) => {
   res.json({ user: req.user ? publicUser(req.user) : null });
 });
 
-app.put("/api/auth/me", requireAuth, (req, res) => {
+app.put("/api/auth/me", requireAuth, async (req, res) => {
   const { nombre } = req.body || {};
   if (!isText(nombre, 100)) return res.status(400).json({ error: "El nombre no es válido." });
-  db.prepare("UPDATE usuarios SET nombre = ? WHERE id = ?").run(nombre.trim(), req.user.id);
-  const user = db.prepare("SELECT * FROM usuarios WHERE id = ?").get(req.user.id);
+  const user = await queryOne("UPDATE usuarios SET nombre = $1 WHERE id = $2 RETURNING *", [nombre.trim(), req.user.id]);
   res.json({ user: publicUser(user) });
 });
 
@@ -125,25 +124,28 @@ app.put("/api/auth/me", requireAuth, (req, res) => {
 
 const mapIngreso = (r) => ({ id: String(r.id), descripcion: r.descripcion, monto: r.monto, categoria: r.categoria, fecha: r.fecha });
 
-app.get("/api/ingresos", requireAuth, (req, res) => {
-  const rows = db.prepare("SELECT * FROM ingresos WHERE usuario_id = ? ORDER BY id").all(req.user.id);
+app.get("/api/ingresos", requireAuth, async (req, res) => {
+  const rows = await query("SELECT * FROM ingresos WHERE usuario_id = $1 ORDER BY id", [req.user.id]);
   res.json(rows.map(mapIngreso));
 });
 
-app.post("/api/ingresos", requireAuth, (req, res) => {
+app.post("/api/ingresos", requireAuth, async (req, res) => {
   const { descripcion, monto, categoria, fecha } = req.body || {};
   if (!isText(descripcion) || !isAmount(monto) || !isText(categoria, 50) || !isDate(fecha)) {
     return res.status(400).json({ error: "Datos del ingreso inválidos." });
   }
-  const { lastInsertRowid } = db
-    .prepare("INSERT INTO ingresos (usuario_id, descripcion, monto, categoria, fecha) VALUES (?, ?, ?, ?, ?)")
-    .run(req.user.id, descripcion.trim(), monto, categoria, fecha);
-  res.status(201).json(mapIngreso(db.prepare("SELECT * FROM ingresos WHERE id = ?").get(lastInsertRowid)));
+  const row = await queryOne(
+    "INSERT INTO ingresos (usuario_id, descripcion, monto, categoria, fecha) VALUES ($1, $2, $3, $4, $5) RETURNING *",
+    [req.user.id, descripcion.trim(), monto, categoria, fecha]
+  );
+  res.status(201).json(mapIngreso(row));
 });
 
-app.delete("/api/ingresos/:id", requireAuth, (req, res) => {
-  const { changes } = db.prepare("DELETE FROM ingresos WHERE id = ? AND usuario_id = ?").run(Number(req.params.id), req.user.id);
-  if (!changes) return res.status(404).json({ error: "Ingreso no encontrado." });
+app.delete("/api/ingresos/:id", requireAuth, async (req, res) => {
+  const id = Number(req.params.id);
+  const borrado = Number.isInteger(id)
+    && await queryOne("DELETE FROM ingresos WHERE id = $1 AND usuario_id = $2 RETURNING id", [id, req.user.id]);
+  if (!borrado) return res.status(404).json({ error: "Ingreso no encontrado." });
   res.json({ ok: true });
 });
 
@@ -154,50 +156,54 @@ const mapGasto = (r) => ({
   presupuestado: r.presupuestado ?? undefined,
 });
 
-app.get("/api/gastos", requireAuth, (req, res) => {
-  const rows = db.prepare("SELECT * FROM gastos WHERE usuario_id = ? ORDER BY id").all(req.user.id);
+app.get("/api/gastos", requireAuth, async (req, res) => {
+  const rows = await query("SELECT * FROM gastos WHERE usuario_id = $1 ORDER BY id", [req.user.id]);
   res.json(rows.map(mapGasto));
 });
 
-app.post("/api/gastos", requireAuth, (req, res) => {
+app.post("/api/gastos", requireAuth, async (req, res) => {
   const { descripcion, monto, categoria, fecha, presupuestado } = req.body || {};
   if (!isText(descripcion) || !isAmount(monto) || !isText(categoria, 50) || !isDate(fecha)
       || (presupuestado != null && !isAmount(presupuestado))) {
     return res.status(400).json({ error: "Datos del gasto inválidos." });
   }
-  const { lastInsertRowid } = db
-    .prepare("INSERT INTO gastos (usuario_id, descripcion, monto, categoria, fecha, presupuestado) VALUES (?, ?, ?, ?, ?, ?)")
-    .run(req.user.id, descripcion.trim(), monto, categoria, fecha, presupuestado ?? null);
-  res.status(201).json(mapGasto(db.prepare("SELECT * FROM gastos WHERE id = ?").get(lastInsertRowid)));
+  const row = await queryOne(
+    "INSERT INTO gastos (usuario_id, descripcion, monto, categoria, fecha, presupuestado) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *",
+    [req.user.id, descripcion.trim(), monto, categoria, fecha, presupuestado ?? null]
+  );
+  res.status(201).json(mapGasto(row));
 });
 
-app.delete("/api/gastos/:id", requireAuth, (req, res) => {
-  const { changes } = db.prepare("DELETE FROM gastos WHERE id = ? AND usuario_id = ?").run(Number(req.params.id), req.user.id);
-  if (!changes) return res.status(404).json({ error: "Gasto no encontrado." });
+app.delete("/api/gastos/:id", requireAuth, async (req, res) => {
+  const id = Number(req.params.id);
+  const borrado = Number.isInteger(id)
+    && await queryOne("DELETE FROM gastos WHERE id = $1 AND usuario_id = $2 RETURNING id", [id, req.user.id]);
+  if (!borrado) return res.status(404).json({ error: "Gasto no encontrado." });
   res.json({ ok: true });
 });
 
 // ---------- Contacto (público) ----------
 
-app.post("/api/contacto", (req, res) => {
+app.post("/api/contacto", async (req, res) => {
   const { nombre, email, asunto, mensaje } = req.body || {};
   if (!isText(nombre, 100) || !isText(email, 200) || !EMAIL_RE.test(email.trim()) || !isText(mensaje, 5000)) {
     return res.status(400).json({ error: "Completá todos los campos correctamente." });
   }
-  db.prepare("INSERT INTO mensajes_contacto (nombre, email, asunto, mensaje) VALUES (?, ?, ?, ?)")
-    .run(nombre.trim(), email.trim(), typeof asunto === "string" ? asunto.slice(0, 100) : null, mensaje.trim());
+  await query("INSERT INTO mensajes_contacto (nombre, email, asunto, mensaje) VALUES ($1, $2, $3, $4)", [
+    nombre.trim(), email.trim(), typeof asunto === "string" ? asunto.slice(0, 100) : null, mensaje.trim(),
+  ]);
   res.status(201).json({ ok: true });
 });
 
 // ---------- Administración ----------
 
-app.get("/api/admin/usuarios", requireAdmin, (_req, res) => {
-  const rows = db.prepare("SELECT * FROM usuarios ORDER BY fecha_registro DESC").all();
+app.get("/api/admin/usuarios", requireAdmin, async (_req, res) => {
+  const rows = await query("SELECT * FROM usuarios ORDER BY fecha_registro DESC");
   res.json(rows.map(publicUser));
 });
 
-app.get("/api/admin/mensajes", requireAdmin, (_req, res) => {
-  res.json(db.prepare("SELECT * FROM mensajes_contacto ORDER BY id DESC").all());
+app.get("/api/admin/mensajes", requireAdmin, async (_req, res) => {
+  res.json(await query("SELECT * FROM mensajes_contacto ORDER BY id DESC"));
 });
 
 app.use("/api", (_req, res) => res.status(404).json({ error: "Ruta de API no encontrada." }));
@@ -212,8 +218,19 @@ if (existsSync(DIST)) {
   console.warn("No se encontró la carpeta dist/. Ejecutá `npm run build` para servir el frontend.");
 }
 
-// Limpia sesiones vencidas al iniciar
-db.prepare("DELETE FROM sesiones WHERE expira <= ?").run(new Date().toISOString());
+// Si falla una consulta (por ejemplo, se cae la conexión con Supabase) respondemos un error claro
+app.use((err, _req, res, _next) => {
+  console.error(err);
+  res.status(500).json({ error: "Error del servidor. Intentá de nuevo en unos segundos." });
+});
+
+try {
+  await initDb();
+} catch (err) {
+  console.error("No se pudo conectar con la base de datos de Supabase:", err.message);
+  console.error("Revisá DATABASE_URL en el archivo .env (ver README).");
+  process.exit(1);
+}
 
 app.listen(PORT, HOST, () => {
   console.log(`DeudasCero escuchando en http://${HOST === "0.0.0.0" ? "<IP-del-servidor>" : HOST}:${PORT}`);
