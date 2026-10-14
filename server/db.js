@@ -1,6 +1,6 @@
-// Conexión a la base de datos PostgreSQL de Supabase.
-// La cadena de conexión se toma de la variable DATABASE_URL (archivo .env).
-import pg from "pg";
+// Conexión a la base de datos MySQL (o MariaDB).
+// Los datos de conexión se toman del archivo .env (DB_HOST, DB_USER, etc.).
+import mysql from "mysql2/promise";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -8,52 +8,62 @@ import { hashPassword } from "./auth.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-if (!process.env.DATABASE_URL) {
-  console.error(
-    "Falta la variable DATABASE_URL.\n" +
-    "Copiá .env.example como .env y pegá la cadena de conexión de Supabase (ver README)."
-  );
-  process.exit(1);
-}
+const config = {
+  host: process.env.DB_HOST || "localhost",
+  port: Number(process.env.DB_PORT) || 3306,
+  user: process.env.DB_USER || "root",
+  password: process.env.DB_PASSWORD || "",
+  charset: "utf8mb4_unicode_ci",
+  timezone: "Z",          // todas las fechas se guardan en UTC
+  dateStrings: ["DATE"],  // las columnas DATE se devuelven como "AAAA-MM-DD"
+};
+const DB_NAME = process.env.DB_NAME || "deudascero";
 
-// Las columnas DATE se devuelven como texto "AAAA-MM-DD" (no como Date con zona horaria)
-pg.types.setTypeParser(pg.types.builtins.DATE, (v) => v);
+export const pool = mysql.createPool({ ...config, database: DB_NAME, connectionLimit: 5 });
 
-const url = new URL(process.env.DATABASE_URL);
-const esLocal = ["localhost", "127.0.0.1", "::1"].includes(url.hostname);
+// Cada conexión trabaja en UTC, igual que el servidor
+pool.pool.on("connection", (conn) => conn.query("SET time_zone = '+00:00'"));
 
-export const pool = new pg.Pool({
-  connectionString: process.env.DATABASE_URL,
-  // Supabase exige conexión cifrada (SSL); una base local normalmente no
-  ssl: esLocal || process.env.DATABASE_SSL === "false" ? false : { rejectUnauthorized: false },
-  max: 5,
-});
-
-// Ejecuta una consulta y devuelve las filas
+// SELECT: devuelve las filas
 export async function query(sql, params = []) {
-  const { rows } = await pool.query(sql, params);
+  const [rows] = await pool.query(sql, params);
   return rows;
 }
 
-// Igual que query, pero devuelve solo la primera fila (o null)
+// SELECT: devuelve solo la primera fila (o null)
 export async function queryOne(sql, params = []) {
   const rows = await query(sql, params);
   return rows[0] ?? null;
 }
 
-// Crea las tablas (si no existen) y el administrador por defecto
+// INSERT / UPDATE / DELETE: devuelve { insertId, affectedRows }
+export async function execute(sql, params = []) {
+  const [result] = await pool.query(sql, params);
+  return result;
+}
+
+// Crea la base de datos y las tablas (si no existen) y el administrador por defecto
 export async function initDb() {
-  await pool.query(readFileSync(path.join(__dirname, "..", "supabase", "schema.sql"), "utf8"));
+  const conn = await mysql.createConnection({ ...config, multipleStatements: true });
+  try {
+    await conn.query(
+      `CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`
+    ).catch(() => {}); // si el usuario no tiene permiso, se asume que la base ya existe
+    await conn.query(`USE \`${DB_NAME}\``);
+    await conn.query(readFileSync(path.join(__dirname, "..", "mysql", "schema.sql"), "utf8"));
+  } finally {
+    await conn.end();
+  }
 
   const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "admin@finanzasjoven.com";
   const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "admin123";
   const admin = await queryOne("SELECT id FROM usuarios WHERE rol = 'admin' LIMIT 1");
   if (!admin) {
-    await query("INSERT INTO usuarios (nombre, email, password_hash, rol) VALUES ($1, $2, $3, 'admin')", [
+    await execute("INSERT INTO usuarios (nombre, email, password_hash, rol) VALUES (?, ?, ?, 'admin')", [
       "Administrador", ADMIN_EMAIL.toLowerCase(), hashPassword(ADMIN_PASSWORD),
     ]);
     console.log(`Administrador creado: ${ADMIN_EMAIL}`);
   }
 
-  await query("DELETE FROM sesiones WHERE expira <= now()");
+  await execute("DELETE FROM sesiones WHERE expira <= NOW()");
 }

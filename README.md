@@ -1,6 +1,6 @@
 # 🪙 FinanzasJoven — Plataforma de Educación Financiera
 
-Plataforma web educativa sobre endeudamiento y finanzas personales para jóvenes latinoamericanos. Incluye módulos de aprendizaje, herramienta de presupuesto, artículos, cursos, quiz y sistema de login con **backend propio (Node.js + Express) y base de datos PostgreSQL en [Supabase](https://supabase.com)**.
+Plataforma web educativa sobre endeudamiento y finanzas personales para jóvenes latinoamericanos. Incluye módulos de aprendizaje, herramienta de presupuesto, artículos, cursos, quiz y sistema de login con **backend propio (Node.js + Express) y base de datos MySQL**.
 
 ---
 
@@ -82,9 +82,9 @@ Si `npm` no funciona, probá con:
 npx npm install
 ```
 
-### Paso 2 — Configurá la base de datos (Supabase)
+### Paso 2 — Configurá la base de datos (MySQL)
 
-Ver la sección **🗄️ Configurar Supabase** más abajo. En resumen: creá el archivo `.env` con la cadena de conexión de tu proyecto de Supabase.
+Ver la sección **🗄️ Configurar MySQL** más abajo. En resumen: tené MySQL encendido y creá el archivo `.env` con el usuario y la contraseña.
 
 ### Paso 3 — Iniciá el proyecto en modo desarrollo
 
@@ -104,28 +104,52 @@ Entrá a `http://localhost:5173`. Vite redirige automáticamente las llamadas a 
 
 ---
 
-## 🗄️ Configurar Supabase
+## 🗄️ Configurar MySQL
 
-La base de datos está en Supabase (PostgreSQL en la nube, plan gratuito). Las tablas se crean **solas** la primera vez que arranca el servidor.
+El proyecto usa **MySQL 8 o superior** (también funciona con **MariaDB 10.5+**, la que trae XAMPP). La base de datos `deudascero` y sus tablas se crean **solas** la primera vez que arranca el servidor.
 
-1. Entrá a https://supabase.com, creá una cuenta y hacé clic en **New project**.
-   - Elegí un nombre, una **contraseña de la base de datos** (guardala) y la región más cercana (por ejemplo *South America (São Paulo)*).
-2. Cuando el proyecto esté listo, hacé clic en el botón **Connect** (arriba).
-3. En **Connection string**, elegí **Session pooler** y copiá la URI. Se ve así:
+### Opción A — En tu PC con XAMPP (Windows / Mac)
+
+1. Instalá XAMPP desde https://www.apachefriends.org.
+2. Abrí el **XAMPP Control Panel** y hacé clic en **Start** al lado de **MySQL**.
+3. Copiá `.env.example` como `.env` (en Windows: `copy .env.example .env`).
+   XAMPP viene con usuario `root` **sin contraseña**, así que los valores por defecto ya funcionan:
    ```
-   postgresql://postgres.abcdefghijkl:[YOUR-PASSWORD]@aws-0-sa-east-1.pooler.supabase.com:5432/postgres
+   DB_HOST=localhost
+   DB_USER=root
+   DB_PASSWORD=
+   DB_NAME=deudascero
    ```
-   > ⚠️ Usá **Session pooler**, no "Direct connection": la conexión directa solo funciona con IPv6 y la mayoría de las redes (como la de la escuela) usan IPv4.
-4. En la carpeta del proyecto, copiá el archivo `.env.example` como `.env`:
+4. Iniciá el servidor (`npm run dev:server` o `npm start`). Deberías ver `Administrador creado: admin@finanzasjoven.com`.
+
+Para ver los datos: http://localhost/phpmyadmin → base `deudascero`.
+
+### Opción B — En el servidor de la escuela (Linux)
+
+1. Instalá MySQL (si no lo tiene):
    ```bash
-   cp .env.example .env        # Linux / Mac
-   copy .env.example .env      # Windows
+   sudo apt install mysql-server
    ```
-5. Abrí `.env` y pegá la URI en `DATABASE_URL`, reemplazando `[YOUR-PASSWORD]` por tu contraseña.
-   Si la contraseña tiene caracteres especiales (`@`, `#`, `/`, `%`...), cambiala por una solo con letras y números para evitar problemas.
-6. Iniciá el servidor (`npm run dev:server` o `npm start`). Deberías ver `Administrador creado: admin@finanzasjoven.com`.
+2. Creá la base y un usuario para el proyecto (cambiá `UnaClaveSegura` por la tuya):
+   ```bash
+   sudo mysql
+   ```
+   ```sql
+   CREATE DATABASE deudascero CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+   CREATE USER 'deudascero'@'localhost' IDENTIFIED BY 'UnaClaveSegura';
+   GRANT ALL PRIVILEGES ON deudascero.* TO 'deudascero'@'localhost';
+   EXIT;
+   ```
+3. Copiá `.env.example` como `.env` y completalo:
+   ```
+   DB_HOST=localhost
+   DB_USER=deudascero
+   DB_PASSWORD=UnaClaveSegura
+   DB_NAME=deudascero
+   ```
+4. Iniciá el servidor con `npm start`.
 
-Para ver los datos: Supabase → **Table Editor**. Si preferís crear las tablas a mano, pegá el contenido de `supabase/schema.sql` en **SQL Editor** y hacé clic en **Run**.
+Si preferís crear las tablas a mano, importá `mysql/schema.sql` (phpMyAdmin → pestaña **SQL**, o `mysql -u root -p deudascero < mysql/schema.sql`).
 
 > 🔒 El archivo `.env` tiene la contraseña de la base de datos: **no lo subas a GitHub** (ya está en `.gitignore`).
 
@@ -133,7 +157,7 @@ Para ver los datos: Supabase → **Table Editor**. Si preferís crear las tablas
 
 ## 🏫 Instalación en el servidor de la escuela (acceso por IP)
 
-En producción **un solo proceso** sirve la página y la API, en el puerto que elijas. El servidor necesita **salida a internet** para conectarse con Supabase.
+En producción **un solo proceso** sirve la página y la API, en el puerto que elijas. MySQL tiene que estar instalado y encendido en el mismo servidor (o en otro de la red, cambiando `DB_HOST`).
 
 ```bash
 # 1. Copiar/clonar el proyecto en el servidor y entrar a la carpeta
@@ -144,7 +168,7 @@ cd Deudas-Cero
 npm install
 npm run build
 
-# 3. Crear el archivo .env con la conexión a Supabase (ver sección anterior)
+# 3. Crear el archivo .env con los datos de MySQL (ver sección anterior)
 cp .env.example .env
 nano .env
 
@@ -178,7 +202,11 @@ Y ya se puede entrar con `http://<IP-del-servidor>`.
 
 | Variable | Por defecto | Para qué sirve |
 |----------|-------------|----------------|
-| `DATABASE_URL` | *(obligatoria)* | Cadena de conexión de Supabase (Session pooler) |
+| `DB_HOST` | `localhost` | Dirección del servidor MySQL |
+| `DB_PORT` | `3306` | Puerto de MySQL |
+| `DB_USER` | `root` | Usuario de MySQL |
+| `DB_PASSWORD` | *(vacía)* | Contraseña de ese usuario |
+| `DB_NAME` | `deudascero` | Nombre de la base de datos |
 | `PORT` | `3000` | Puerto donde escucha el servidor |
 | `HOST` | `0.0.0.0` | `0.0.0.0` = accesible desde otras PCs de la red |
 | `ADMIN_EMAIL` | `admin@finanzasjoven.com` | Email del admin que se crea la primera vez |
@@ -202,9 +230,9 @@ Si el servidor tiene firewall, habilitá el puerto: `sudo ufw allow 80` (o el qu
 finanzasjoven/
 ├── server/                 ← BACKEND
 │   ├── index.js            ← Servidor Express (API + sirve el frontend)
-│   ├── db.js               ← Conexión a Supabase (PostgreSQL)
+│   ├── db.js               ← Conexión a MySQL
 │   ├── auth.js             ← Hash de contraseñas y tokens de sesión
-├── supabase/
+├── mysql/
 │   └── schema.sql          ← Tablas de la base de datos
 ├── .env.example            ← Modelo del archivo de configuración (.env)
 ├── index.html              ← Archivo de entrada para el navegador
@@ -244,7 +272,7 @@ finanzasjoven/
 
 ## 🔐 Sistema de login y base de datos
 
-Los usuarios y sus datos se guardan en la base de datos **PostgreSQL de Supabase**. El navegador nunca habla directo con Supabase: todo pasa por nuestro servidor, que es el único que tiene la contraseña. Las contraseñas se guardan cifradas (scrypt) y la sesión viaja en una cookie segura (`httpOnly`) que dura 7 días.
+Los usuarios y sus datos se guardan en la base de datos **MySQL**. El navegador nunca habla directo con MySQL: todo pasa por nuestro servidor, que es el único que tiene la contraseña. Las contraseñas se guardan cifradas (scrypt) y la sesión viaja en una cookie segura (`httpOnly`) que dura 7 días.
 
 ### Qué puede ver cada visitante
 
@@ -274,9 +302,9 @@ Podés cambiarla con las variables `ADMIN_EMAIL` y `ADMIN_PASSWORD` **antes del 
 | `gastos` | Gastos de cada usuario |
 | `mensajes_contacto` | Mensajes enviados desde el formulario de contacto |
 
-Para ver los datos: Supabase → **Table Editor**. Las tablas tienen RLS (*Row Level Security*) activado sin políticas, así que no se pueden leer desde la API pública de Supabase; solo desde nuestro servidor.
+Para ver los datos podés usar phpMyAdmin, MySQL Workbench o la terminal (`mysql -u root -p deudascero`).
 
-Para empezar de cero: Supabase → **SQL Editor** → `DROP TABLE mensajes_contacto, gastos, ingresos, sesiones, usuarios;` y reiniciá el servidor.
+Para empezar de cero: `DROP DATABASE deudascero;` y reiniciá el servidor (con un usuario sin permiso para crear bases, volvé a crearla como en la Opción B).
 
 ### Endpoints de la API
 
@@ -337,7 +365,7 @@ Para empezar de cero: Supabase → **SQL Editor** → `DROP TABLE mensajes_conta
 | **Recharts** | Gráficos del resumen de presupuesto |
 | **Lucide React** | Íconos |
 | **Express** | Servidor web y API REST |
-| **Supabase** (PostgreSQL) + `pg` | Base de datos |
+| **MySQL** + `mysql2` | Base de datos |
 
 ---
 
@@ -371,15 +399,11 @@ El backend no está corriendo. En desarrollo, asegurate de tener abierto `npm ru
 - Verificá que usás la IP correcta del servidor y el puerto (`:3000` si no usaste el 80).
 - Revisá que el firewall del servidor permita ese puerto.
 
-### "Falta la variable DATABASE_URL"
+### "No se pudo conectar con la base de datos de MySQL"
 
-No existe el archivo `.env` o no tiene `DATABASE_URL`. Ver la sección **🗄️ Configurar Supabase**.
-
-### "No se pudo conectar con la base de datos de Supabase"
-
-- `password authentication failed`: la contraseña en `DATABASE_URL` es incorrecta (podés cambiarla en Supabase → Project Settings → Database).
-- `ENOTFOUND` / `ENETUNREACH` / `timeout`: revisá que usaste la URI de **Session pooler** y que el servidor tiene internet.
-- Si el proyecto de Supabase estuvo una semana sin uso, el plan gratuito lo **pausa**: entrá al panel de Supabase y hacé clic en *Restore project*.
+- `ECONNREFUSED`: MySQL no está encendido (en XAMPP, hacé clic en **Start** al lado de MySQL) o `DB_HOST`/`DB_PORT` están mal.
+- `Access denied for user`: el usuario o la contraseña del `.env` son incorrectos.
+- `Unknown database`: la base no existe y el usuario no tiene permiso para crearla; creala como en la Opción B.
 
 ---
 
