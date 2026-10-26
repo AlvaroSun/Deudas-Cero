@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { User, Mail, Lock, Eye, EyeOff, AlertCircle, CheckCircle } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import logoImg from "../DeudasCero-Marron.png";
 
 export default function Registro() {
   const [nombre, setNombre] = useState("");
@@ -35,13 +36,17 @@ export default function Registro() {
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <Link to="/" className="inline-flex items-center gap-2 font-bold text-2xl text-primary mb-6" style={{ fontFamily: "Playfair Display, serif" }}>
-            <span className="text-3xl">🪙</span> FinanzasJoven
-          </Link>
-          <h1 className="text-3xl font-bold text-foreground">Creá tu cuenta</h1>
-          <p className="text-muted-foreground mt-2">Empezá tu camino hacia la libertad financiera</p>
-        </div>
+        <div className="text-center mb-10">
+        <Link to="/" className="inline-flex items-center justify-center mb-1">
+          <img 
+            src={logoImg} 
+            alt="DeudasCero Logo" 
+            className="h-16 w-auto object-contain" 
+          />
+        </Link>
+        <h1 className="text-3xl font-bold text-foreground">Creá tu cuenta</h1>
+        <p className="text-muted-foreground mt-1">Empezá tu camino hacia la libertad financiera</p>
+      </div>
 
         <div className="bg-card rounded-2xl border border-border p-8 shadow-sm">
           {error && (

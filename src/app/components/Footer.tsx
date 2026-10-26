@@ -1,5 +1,6 @@
 import { Link } from "react-router";
 import { Instagram, Twitter, Facebook, Mail } from "lucide-react";
+import logoImg from "./Deudas Cero.png";
 
 export default function Footer() {
   return (
@@ -7,9 +8,13 @@ export default function Footer() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div className="md:col-span-2">
-            <div className="flex items-center gap-2 font-bold text-xl mb-3" style={{ fontFamily: "Playfair Display, serif" }}>
-              <span className="text-2xl">🪙</span>
-              <span>DeudasCero</span>
+            {/* Logo Section */}
+            <div className="mb-3">
+              <img 
+                src={logoImg} 
+                alt="DeudasCero Logo" 
+                className="h-16 w-auto object-contain" 
+              />
             </div>
             <p className="text-primary-foreground/70 text-sm leading-relaxed max-w-xs">
               Plataforma educativa para jóvenes que quieren tomar control de sus finanzas personales y construir un futuro libre de deudas.

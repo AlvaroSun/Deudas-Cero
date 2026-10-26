@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router";
 import { Mail, Lock, Eye, EyeOff, AlertCircle } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import logoImg from "../DeudasCero-Marron.png";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -29,12 +30,16 @@ export default function Login() {
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <Link to="/" className="inline-flex items-center gap-2 font-bold text-2xl text-primary mb-6" style={{ fontFamily: "Playfair Display, serif" }}>
-            <span className="text-3xl">🪙</span> FinanzasJoven
+        <div className="text-center mb-10">
+          <Link to="/" className="inline-flex items-center justify-center mb-1">
+            <img 
+              src={logoImg} 
+              alt="DeudasCero Logo" 
+              className="h-16 w-auto object-contain" 
+            />
           </Link>
           <h1 className="text-3xl font-bold text-foreground">Bienvenido de vuelta</h1>
-          <p className="text-muted-foreground mt-2">Ingresá a tu cuenta para continuar</p>
+          <p className="text-muted-foreground mt-1">Ingresá a tu cuenta para continuar</p>
         </div>
 
         <div className="bg-card rounded-2xl border border-border p-8 shadow-sm">
