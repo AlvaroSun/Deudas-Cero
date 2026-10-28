@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router";
 import { Menu, X, BookOpen, PiggyBank, GraduationCap, Users, User, LogOut, LayoutDashboard, ChevronDown } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import Logo from "./Logo";
 
 const navLinks = [
   { to: "/modulos", label: "Módulos", icon: BookOpen },
@@ -27,7 +28,7 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           <Link to="/" className="flex items-center gap-2 font-bold text-xl" style={{ fontFamily: "Playfair Display, serif" }}>
-            <span className="text-2xl">🪙</span>
+            <Logo size={32} badge />
             <span>DeudasCero</span>
           </Link>
 

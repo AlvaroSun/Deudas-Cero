@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router";
 import { User, Mail, Lock, Eye, EyeOff, AlertCircle, CheckCircle } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import Logo from "../../components/Logo";
 
 export default function Registro() {
   const [nombre, setNombre] = useState("");
@@ -38,7 +39,7 @@ export default function Registro() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Link to="/" className="inline-flex items-center gap-2 font-bold text-2xl text-primary mb-6" style={{ fontFamily: "Playfair Display, serif" }}>
-            <span className="text-3xl">🪙</span> FinanzasJoven
+            <Logo size={48} /> DeudasCero
           </Link>
           <h1 className="text-3xl font-bold text-foreground">Creá tu cuenta</h1>
           <p className="text-muted-foreground mt-2">Empezá tu camino hacia la libertad financiera</p>

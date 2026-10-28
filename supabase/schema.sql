@@ -50,6 +50,15 @@ CREATE TABLE IF NOT EXISTS mensajes_contacto (
   fecha    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- Lecciones completadas de cada curso (una fila por lección)
+CREATE TABLE IF NOT EXISTS progreso_cursos (
+  usuario_id  BIGINT NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+  curso_id    TEXT NOT NULL,
+  leccion     INTEGER NOT NULL CHECK (leccion >= 0),
+  fecha       TIMESTAMPTZ NOT NULL DEFAULT now(),
+  PRIMARY KEY (usuario_id, curso_id, leccion)
+);
+
 -- Seguridad: Supabase publica las tablas en su API REST. Activando RLS sin
 -- políticas, nadie puede leerlas desde ahí (ni con la "anon key"); solo
 -- nuestro servidor, que se conecta como dueño de las tablas.
@@ -58,3 +67,4 @@ ALTER TABLE sesiones          ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ingresos          ENABLE ROW LEVEL SECURITY;
 ALTER TABLE gastos            ENABLE ROW LEVEL SECURITY;
 ALTER TABLE mensajes_contacto ENABLE ROW LEVEL SECURITY;
+ALTER TABLE progreso_cursos   ENABLE ROW LEVEL SECURITY;

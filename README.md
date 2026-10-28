@@ -273,6 +273,7 @@ Podés cambiarla con las variables `ADMIN_EMAIL` y `ADMIN_PASSWORD` **antes del 
 | `ingresos` | Ingresos de cada usuario |
 | `gastos` | Gastos de cada usuario |
 | `mensajes_contacto` | Mensajes enviados desde el formulario de contacto |
+| `progreso_cursos` | Lecciones que cada usuario marcó como completadas en los cursos |
 
 Para ver los datos: Supabase → **Table Editor**. Las tablas tienen RLS (*Row Level Security*) activado sin políticas, así que no se pueden leer desde la API pública de Supabase; solo desde nuestro servidor.
 
@@ -290,6 +291,8 @@ Para empezar de cero: Supabase → **SQL Editor** → `DROP TABLE mensajes_conta
 | DELETE | `/api/ingresos/:id` | Borrar un ingreso |
 | GET / POST | `/api/gastos` | Listar / agregar gastos |
 | DELETE | `/api/gastos/:id` | Borrar un gasto |
+| GET | `/api/cursos/progreso` | Lecciones completadas de todos los cursos |
+| PUT | `/api/cursos/:id/lecciones/:n` | Marcar (`{"completada": true}`) o desmarcar una lección |
 | POST | `/api/contacto` | Enviar mensaje de contacto |
 | GET | `/api/admin/usuarios` | Lista de usuarios *(admin)* |
 | GET | `/api/admin/mensajes` | Mensajes de contacto *(admin)* |
