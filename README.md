@@ -301,6 +301,7 @@ Podés cambiarla con las variables `ADMIN_EMAIL` y `ADMIN_PASSWORD` **antes del 
 | `ingresos` | Ingresos de cada usuario |
 | `gastos` | Gastos de cada usuario |
 | `mensajes_contacto` | Mensajes enviados desde el formulario de contacto |
+| `progreso_cursos` | Lecciones que cada usuario marcó como completadas en los cursos |
 
 Para ver los datos podés usar phpMyAdmin, MySQL Workbench o la terminal (`mysql -u root -p deudascero`).
 
@@ -318,6 +319,8 @@ Para empezar de cero: `DROP DATABASE deudascero;` y reiniciá el servidor (con u
 | DELETE | `/api/ingresos/:id` | Borrar un ingreso |
 | GET / POST | `/api/gastos` | Listar / agregar gastos |
 | DELETE | `/api/gastos/:id` | Borrar un gasto |
+| GET | `/api/cursos/progreso` | Lecciones completadas de todos los cursos |
+| PUT | `/api/cursos/:id/lecciones/:n` | Marcar (`{"completada": true}`) o desmarcar una lección |
 | POST | `/api/contacto` | Enviar mensaje de contacto |
 | GET | `/api/admin/usuarios` | Lista de usuarios *(admin)* |
 | GET | `/api/admin/mensajes` | Mensajes de contacto *(admin)* |

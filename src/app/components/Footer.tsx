@@ -1,5 +1,6 @@
 import { Link } from "react-router";
 import { Instagram, Twitter, Facebook, Mail } from "lucide-react";
+import Logo from "./Logo";
 
 export default function Footer() {
   return (
@@ -8,7 +9,7 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div className="md:col-span-2">
             <div className="flex items-center gap-2 font-bold text-xl mb-3" style={{ fontFamily: "Playfair Display, serif" }}>
-              <span className="text-2xl">🪙</span>
+              <Logo size={32} badge />
               <span>DeudasCero</span>
             </div>
             <p className="text-primary-foreground/70 text-sm leading-relaxed max-w-xs">

@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router";
 import { ArrowLeft, CheckCircle, Circle, Clock, BookOpen, ChevronDown, ChevronUp } from "lucide-react";
 import { cursos } from "./CursosList";
+import { api } from "../../lib/api";
 
 const lecciones: Record<string, { titulo: string; duracion: string; contenido: string }[]> = {
   "1": [
@@ -39,6 +40,18 @@ export default function Curso() {
   const lessons = id ? (lecciones[id] || []) : [];
   const [completadas, setCompletadas] = useState<Set<number>>(new Set());
   const [abierta, setAbierta] = useState<number | null>(0);
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState("");
+
+  // El progreso se guarda en la base de datos: al entrar, se cargan las lecciones ya completadas
+  useEffect(() => {
+    if (!id) return;
+    setCargando(true);
+    api<Record<string, number[]>>("/cursos/progreso")
+      .then((progreso) => { setCompletadas(new Set(progreso[id] || [])); setError(""); })
+      .catch((e) => setError((e as Error).message))
+      .finally(() => setCargando(false));
+  }, [id]);
 
   if (!curso) {
     return (
@@ -49,16 +62,31 @@ export default function Curso() {
     );
   }
 
-  function toggleCompleta(i: number) {
+  function cambiarLeccion(i: number, completada: boolean) {
     setCompletadas((prev) => {
       const next = new Set(prev);
-      if (next.has(i)) next.delete(i);
-      else next.add(i);
+      if (completada) next.add(i);
+      else next.delete(i);
       return next;
     });
   }
 
-  const progreso = lessons.length > 0 ? Math.round((completadas.size / lessons.length) * 100) : 0;
+  async function toggleCompleta(i: number) {
+    if (cargando) return;
+    const completada = !completadas.has(i);
+    cambiarLeccion(i, completada); // se muestra al instante...
+    try {
+      await api(`/cursos/${curso!.id}/lecciones/${i}`, { method: "PUT", body: { completada } });
+      setError("");
+    } catch (e) {
+      cambiarLeccion(i, !completada); // ...y si no se pudo guardar, vuelve atrás
+      setError(`No se pudo guardar tu progreso: ${(e as Error).message}`);
+    }
+  }
+
+  // Solo cuentan las lecciones que existen hoy en el curso
+  const hechas = lessons.filter((_, i) => completadas.has(i)).length;
+  const progreso = lessons.length > 0 ? Math.round((hechas / lessons.length) * 100) : 0;
 
   return (
     <div className="bg-background min-h-screen">
@@ -81,6 +109,9 @@ export default function Curso() {
           {/* Lessons */}
           <div className="lg:col-span-2 space-y-3">
             <h2 className="font-bold text-xl text-foreground mb-5">Contenido del curso</h2>
+            {error && (
+              <div className="px-4 py-3 rounded-xl bg-destructive/10 text-destructive text-sm">{error}</div>
+            )}
             {lessons.map((l, i) => (
               <div key={i} className="bg-card rounded-xl border border-border overflow-hidden">
                 <button
@@ -124,8 +155,11 @@ export default function Curso() {
           <div className="space-y-5">
             <div className="bg-card rounded-2xl p-6 border border-border sticky top-24">
               <p className="font-bold text-foreground mb-3">Tu progreso</p>
+              {cargando ? (
+                <p className="text-sm text-muted-foreground">Cargando tu progreso...</p>
+              ) : (<>
               <div className="flex items-center justify-between text-sm mb-2">
-                <span className="text-muted-foreground">{completadas.size} de {lessons.length} lecciones</span>
+                <span className="text-muted-foreground">{hechas} de {lessons.length} lecciones</span>
                 <span className="font-bold text-accent">{progreso}%</span>
               </div>
               <div className="w-full bg-muted rounded-full h-3 mb-5">
@@ -149,6 +183,7 @@ export default function Curso() {
                   Continuar
                 </button>
               )}
+              </>)}
             </div>
           </div>
         </div>

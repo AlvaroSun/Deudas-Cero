@@ -186,6 +186,43 @@ app.delete("/api/gastos/:id", requireAuth, async (req, res) => {
   res.json({ ok: true });
 });
 
+// ---------- Progreso de los cursos ----------
+
+const isCursoId = (v) => /^[a-z0-9-]{1,40}$/i.test(v);
+const isLeccion = (v) => Number.isInteger(v) && v >= 0 && v < 1000;
+
+// Devuelve las lecciones completadas de todos los cursos: { "1": [0, 2], "3": [1] }
+app.get("/api/cursos/progreso", requireAuth, async (req, res) => {
+  const rows = await query(
+    "SELECT curso_id, leccion FROM progreso_cursos WHERE usuario_id = ? ORDER BY curso_id, leccion",
+    [req.user.id]
+  );
+  const progreso = {};
+  for (const r of rows) (progreso[r.curso_id] ??= []).push(r.leccion);
+  res.json(progreso);
+});
+
+// Marca o desmarca una lección como completada
+app.put("/api/cursos/:cursoId/lecciones/:leccion", requireAuth, async (req, res) => {
+  const { cursoId } = req.params;
+  const leccion = Number(req.params.leccion);
+  const { completada } = req.body || {};
+  if (!isCursoId(cursoId) || !isLeccion(leccion) || typeof completada !== "boolean") {
+    return res.status(400).json({ error: "Datos de la lección inválidos." });
+  }
+  if (completada) {
+    await execute(
+      "INSERT IGNORE INTO progreso_cursos (usuario_id, curso_id, leccion) VALUES (?, ?, ?)",
+      [req.user.id, cursoId, leccion]
+    );
+  } else {
+    await execute("DELETE FROM progreso_cursos WHERE usuario_id = ? AND curso_id = ? AND leccion = ?", [
+      req.user.id, cursoId, leccion,
+    ]);
+  }
+  res.json({ ok: true });
+});
+
 // ---------- Contacto (público) ----------
 
 app.post("/api/contacto", async (req, res) => {

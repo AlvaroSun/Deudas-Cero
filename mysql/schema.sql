@@ -50,3 +50,13 @@ CREATE TABLE IF NOT EXISTS mensajes_contacto (
   mensaje  TEXT NOT NULL,
   fecha    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Lecciones completadas de cada curso (una fila por lección)
+CREATE TABLE IF NOT EXISTS progreso_cursos (
+  usuario_id  BIGINT UNSIGNED NOT NULL,
+  curso_id    VARCHAR(40) NOT NULL,
+  leccion     INT UNSIGNED NOT NULL,
+  fecha       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (usuario_id, curso_id, leccion),
+  CONSTRAINT progreso_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
