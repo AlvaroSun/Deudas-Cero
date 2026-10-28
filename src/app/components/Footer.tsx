@@ -1,6 +1,6 @@
 import { Link } from "react-router";
 import { Instagram, Twitter, Facebook, Mail } from "lucide-react";
-import Logo from "./Logo";
+import Logo, { LogoTexto } from "./Logo";
 
 export default function Footer() {
   return (
@@ -10,7 +10,7 @@ export default function Footer() {
           <div className="md:col-span-2">
             <div className="flex items-center gap-2 font-bold text-xl mb-3" style={{ fontFamily: "Playfair Display, serif" }}>
               <Logo size={32} badge />
-              <span>DeudasCero</span>
+              <LogoTexto height={44} />
             </div>
             <p className="text-primary-foreground/70 text-sm leading-relaxed max-w-xs">
               Plataforma educativa para jóvenes que quieren tomar control de sus finanzas personales y construir un futuro libre de deudas.
