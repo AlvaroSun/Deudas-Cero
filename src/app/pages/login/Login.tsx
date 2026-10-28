@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router";
 import { Mail, Lock, Eye, EyeOff, AlertCircle } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
-import Logo from "../../components/Logo";
+import Logo, { LogoTexto } from "../../components/Logo";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -31,7 +31,7 @@ export default function Login() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Link to="/" className="inline-flex items-center gap-2 font-bold text-2xl text-primary mb-6" style={{ fontFamily: "Playfair Display, serif" }}>
-            <Logo size={48} /> DeudasCero
+            <Logo size={48} /> <LogoTexto height={52} color="marron" />
           </Link>
           <h1 className="text-3xl font-bold text-foreground">Bienvenido de vuelta</h1>
           <p className="text-muted-foreground mt-2">Ingresá a tu cuenta para continuar</p>
